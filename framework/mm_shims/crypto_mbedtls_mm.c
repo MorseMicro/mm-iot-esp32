@@ -25,6 +25,7 @@
 #include <mbedtls/pkcs5.h>
 #include <mbedtls/md.h>
 #include <mbedtls/md5.h>
+#include <mbedtls/nist_kw.h>
 #include <mbedtls/platform_util.h>
 #include <mbedtls/sha1.h>
 #include <mbedtls/sha256.h>
@@ -582,6 +583,36 @@ int aes_decrypt(void *ctx, const uint8_t *crypt, uint8_t *plain)
 }
 
 void aes_decrypt_deinit(void *ctx)
+{
+    mbedtls_aes_free(ctx);
+    free(ctx);
+}
+
+void *aes_encrypt_init(const uint8_t *key, size_t len)
+{
+    mbedtls_aes_context *aes = malloc(sizeof(*aes));
+    if (!aes)
+    {
+        return NULL;
+    }
+
+    mbedtls_aes_init(aes);
+    if (mbedtls_aes_setkey_dec(aes, key, len * 8) == 0)
+    {
+        return aes;
+    }
+
+    mbedtls_aes_free(aes);
+    free(aes);
+    return NULL;
+}
+
+int aes_encrypt(void *ctx, const uint8_t *crypt, uint8_t *plain)
+{
+    return mbedtls_aes_crypt_ecb(ctx, MBEDTLS_AES_ENCRYPT, crypt, plain);
+}
+
+void aes_encrypt_deinit(void *ctx)
 {
     mbedtls_aes_free(ctx);
     free(ctx);
@@ -1771,4 +1802,25 @@ int crypto_ec_point_cmp(const struct crypto_ec *e,
 {
     return mbedtls_ecp_point_cmp((const mbedtls_ecp_point *)a,
                                  (const mbedtls_ecp_point *)b);
+}
+
+int aes_wrap(const uint8_t *kek, size_t kek_len, int n, const uint8_t *plain, uint8_t *cipher)
+{
+    mbedtls_nist_kw_context ctx;
+    mbedtls_nist_kw_init(&ctx);
+    size_t out_len = 0;
+
+    int ret = mbedtls_nist_kw_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, kek, kek_len * 8, 1);
+    if (ret != 0)
+    {
+        goto cleanup;
+    }
+
+    ret = mbedtls_nist_kw_wrap(&ctx, MBEDTLS_KW_MODE_KW, plain, n * 8, cipher, &out_len,
+                               8 * (n + 1));
+
+cleanup:
+    mbedtls_nist_kw_free(&ctx);
+
+    return ret;
 }

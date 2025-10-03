@@ -106,6 +106,9 @@ struct mmwlan_stats_umac_data
 
     /** Total number of frames that have actually been put into the A-MPDU reordering buffer. */
     uint32_t datapath_rx_reorder_total;
+
+    /** Number of times any timer or timeout has fired. */
+    uint32_t timeouts_fired;
 };
 
 /** @} */

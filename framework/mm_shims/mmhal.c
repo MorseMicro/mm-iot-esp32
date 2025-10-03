@@ -13,6 +13,7 @@
 #include "esp_random.h"
 #include "esp_system.h"
 #include "driver/gpio.h"
+#include "esp_mac.h"
 
 void mmhal_init(void)
 {
@@ -48,11 +49,40 @@ void mmhal_log_flush(void)
 {
 }
 
+/**
+ * Generate a stable, device-unique MAC address based on the ESP32 MAC address. This address is not
+ * globally unique, but is consistent across boots on the same device and marked as locally
+ * administered (0x02 prefix).
+ *
+ * @param mac_addr Location where the MAC address will be stored.
+ */
+static void generate_stable_mac_addr(uint8_t *mac_addr)
+{
+    ESP_ERROR_CHECK(esp_efuse_mac_get_default(mac_addr));
+
+    /* Set MAC address as locally administered */
+    mac_addr[0] = 0x02;
+    mac_addr[1] = 0x00;
+}
+
 void mmhal_read_mac_addr(uint8_t *mac_addr)
 {
-    /* We do not override the MAC address here. Therefore the driver will attempt to read it from
-     * the chip and failing that will assign a randomly generated address. */
-    (void)(mac_addr);
+    /*
+     * MAC address is determined using the following precedence:
+     *
+     * 1. The MAC address in transceiver OTP (i.e., the value of mac_addr passed into this function,
+     *    if non-zero).
+     *
+     * 2. A stable MAC address generated based on the ESP32 MAC address. This value is consistent
+     *    across boots for the same device, but unique to each ESP32.
+     */
+
+    if (!mm_mac_addr_is_zero(mac_addr))
+    {
+        return;
+    }
+
+    generate_stable_mac_addr(mac_addr);
 }
 
 uint32_t mmhal_random_u32(uint32_t min, uint32_t max)

@@ -240,7 +240,7 @@ void mmhal_set_debug_pins(uint32_t mask, uint32_t values);
  *
  * @return    Epoch time (seconds since 1 Jan 1970) or 0 on failure.
  */
-time_t mmhal_get_time();
+time_t mmhal_get_time(void);
 
 /**
  * Sets the RTC to the specified time in UTC.

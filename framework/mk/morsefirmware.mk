@@ -49,15 +49,17 @@ end_symbol = _binary_$(subst -,_,$(subst /,_,$(subst .,_,$(1))))_end
 $(FW_OBJ): $(FW_MBIN)
 	@echo "Copying $<"
 	@mkdir -p $(dir $@)
-	$(QUIET)$(OBJCOPY) -I binary -O $(BFDNAME) -B $(ARCH) $< $@  \
-		--redefine-sym $(call start_symbol,$<)=firmware_binary_start   \
-		--redefine-sym $(call end_symbol,$<)=firmware_binary_end       \
-		--rename-section .data=.rodata._fw_mbin,contents,alloc,load,readonly,data
+	$(QUIET)$(OBJCOPY) -I binary -O $(BFDNAME) -B $(ARCH) $< $@                 \
+		--redefine-sym $(call start_symbol,$<)=firmware_binary_start              \
+		--redefine-sym $(call end_symbol,$<)=firmware_binary_end                  \
+		--rename-section .data=.rodata._fw_mbin,contents,alloc,load,readonly,data \
+		--set-section-alignment .data=4
 
 $(BCF_OBJ): $(BCF_MBIN)
 	@echo "Copying $<"
 	@mkdir -p $(dir $@)
-	$(QUIET)$(OBJCOPY) -I binary -O $(BFDNAME) -B $(ARCH) $< $@  \
-		--redefine-sym $(call start_symbol,$<)=bcf_binary_start   \
-		--redefine-sym $(call end_symbol,$<)=bcf_binary_end       \
-		--rename-section .data=.rodata,contents,alloc,load,readonly,data
+	$(QUIET)$(OBJCOPY) -I binary -O $(BFDNAME) -B $(ARCH) $< $@        \
+		--redefine-sym $(call start_symbol,$<)=bcf_binary_start          \
+		--redefine-sym $(call end_symbol,$<)=bcf_binary_end              \
+		--rename-section .data=.rodata,contents,alloc,load,readonly,data \
+		--set-section-alignment .data=4

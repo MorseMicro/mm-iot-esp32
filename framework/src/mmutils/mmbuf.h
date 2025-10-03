@@ -4,17 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- /**
-  * @defgroup MMBUF Morse Micro Buffer (mmbuf) API
-  *
-  * This API provides support for buffers tailored towards packet-like data that has
-  * headers and trailers that are applied at subsequent layers.
-  *
-  * It is designed to support various backends for memory allocation. The default
-  * is allocation on the heap, but other methods could be used due to the flexible API.
-  *
-  * @{
-  */
+/**
+ * @defgroup MMBUF Morse Micro Buffer (mmbuf) API
+ *
+ * This API provides support for buffers tailored towards packet-like data that has
+ * headers and trailers that are applied at subsequent layers.
+ *
+ * It is designed to support various backends for memory allocation. The default
+ * is allocation on the heap, but other methods could be used due to the flexible API.
+ *
+ * @{
+ */
 
 #pragma once
 
@@ -75,11 +75,11 @@ struct mmbuf_ops
 /**
  * Initialize an mmbuf header with the given values.
  *
- * @param mmbuf                 mmbuf to initialize.
- * @param buf                   Pointer to buffer.
- * @param buf_len               Length of @p buf.
- * @param data_start_offset     Initial value for @c start_offset.
- * @param ops                   Operations data structure.
+ * @param mmbuf             mmbuf to initialize.
+ * @param buf               Pointer to buffer.
+ * @param buf_len           Length of @p buf.
+ * @param data_start_offset Initial value for @c start_offset.
+ * @param ops               Operations data structure.
  */
 static inline void mmbuf_init(struct mmbuf *mmbuf, uint8_t *buf, uint32_t buf_len,
                               uint32_t data_start_offset, const struct mmbuf_ops *ops)
@@ -94,8 +94,8 @@ static inline void mmbuf_init(struct mmbuf *mmbuf, uint8_t *buf, uint32_t buf_le
 /**
  * Allocate a new mmbuf on the heap (using @ref mmosal_malloc()).
  *
- * @param space_at_start    Amount of space to reserve at start of buffer.
- * @param space_at_end      Amount of space to reserve at end of buffer.
+ * @param space_at_start Amount of space to reserve at start of buffer.
+ * @param space_at_end   Amount of space to reserve at end of buffer.
  *
  * @note @c start_offset will be set to @p space_at_start, and @c buf_len will be the sum
  *       of @p space_at_start and @p space_at_end (rounded up to a multiple of 4).
@@ -109,25 +109,24 @@ struct mmbuf *mmbuf_alloc_on_heap(uint32_t space_at_start, uint32_t space_at_end
  * @p original, the newly allocated mmbuf will be allocated on the heap using
  * @ref mmbuf_alloc_on_heap().
  *
- * @param original          mmbuf to copy.
+ * @param original mmbuf to copy.
  *
  * @returns newly allocated mmbuf on success or @c NULL on failure.
  */
 struct mmbuf *mmbuf_make_copy_on_heap(struct mmbuf *original);
 
-
 /**
  * Release a reference to the given mmbuf. If this was the last reference (@c addition_ref_cnt
  * was 0) then the mmbuf will be freed using the appropriate op callback.
  *
- * @param mmbuf     The mmbuf to release reference to. May be @c NULL.
+ * @param mmbuf The mmbuf to release reference to. May be @c NULL.
  */
 void mmbuf_release(struct mmbuf *mmbuf);
 
 /**
  * Gets a pointer to the start of the data in the mmbuf.
  *
- * @param mmbuf     The mmbuf to operate on.
+ * @param mmbuf The mmbuf to operate on.
  *
  * @returns a pointer to the start of the data in the mmbuf.
  */
@@ -139,7 +138,7 @@ static inline uint8_t *mmbuf_get_data_start(struct mmbuf *mmbuf)
 /**
  * Gets a pointer to the end of the data in the mmbuf.
  *
- * @param mmbuf     The mmbuf to operate on.
+ * @param mmbuf The mmbuf to operate on.
  *
  * @returns a pointer to the end of the data in the mmbuf.
  */
@@ -151,7 +150,7 @@ static inline uint8_t *mmbuf_get_data_end(struct mmbuf *mmbuf)
 /**
  * Gets the length of the data currently in the mmbuf.
  *
- * @param mmbuf     The mmbuf to operate on.
+ * @param mmbuf The mmbuf to operate on.
  *
  * @returns the length of the data currently in the mmbuf (note that this is different from the
  *          length of the available buffer space).
@@ -164,7 +163,7 @@ static inline uint32_t mmbuf_get_data_length(struct mmbuf *mmbuf)
 /**
  * Returns the amount of space available for prepending to the data in the buffer.
  *
- * @param mmbuf     The mmbuf to operate on.
+ * @param mmbuf The mmbuf to operate on.
  *
  * @returns the available space in bytes.
  */
@@ -176,7 +175,7 @@ static inline uint32_t mmbuf_available_space_at_start(struct mmbuf *mmbuf)
 /**
  * Returns the amount of space available for appending to the data in the buffer.
  *
- * @param mmbuf     The mmbuf to operate on.
+ * @param mmbuf The mmbuf to operate on.
  *
  * @returns the available space in bytes.
  */
@@ -193,8 +192,8 @@ static inline uint32_t mmbuf_available_space_at_end(struct mmbuf *mmbuf)
  *
  * @warning @p len must be less than or equal to @ref mmbuf_available_space_at_start().
  *
- * @param mmbuf     The mmbuf to operate on.
- * @param len       Length of data to be prepended.
+ * @param mmbuf The mmbuf to operate on.
+ * @param len   Length of data to be prepended.
  *
  * @returns a pointer to the place in the buffer where the data should be put.
  */
@@ -213,11 +212,11 @@ static inline uint8_t *mmbuf_prepend(struct mmbuf *mmbuf, uint32_t len)
  *
  * @warning The memory area pointed to by data must not overlap with the mmbuf data.
  *
- * @param mmbuf     The mmbuf to operate on.
- * @param data      The data to be prepended.
- * @param len       Length of data to be prepended.
+ * @param mmbuf The mmbuf to operate on.
+ * @param data  The data to be prepended.
+ * @param len   Length of data to be prepended.
  */
-static inline void mmbuf_prepend_data(struct mmbuf *mmbuf, const uint8_t * data, uint32_t len)
+static inline void mmbuf_prepend_data(struct mmbuf *mmbuf, const uint8_t *data, uint32_t len)
 {
     uint8_t *dest = mmbuf_prepend(mmbuf, len);
     memcpy(dest, data, len);
@@ -231,8 +230,8 @@ static inline void mmbuf_prepend_data(struct mmbuf *mmbuf, const uint8_t * data,
  *
  * @warning @p len must be less than or equal to @ref mmbuf_available_space_at_end().
  *
- * @param mmbuf     The mmbuf to operate on.
- * @param len       Length of data to be append.
+ * @param mmbuf The mmbuf to operate on.
+ * @param len   Length of data to be append.
  *
  * @returns a pointer to the place in the buffer where the data should be put.
  */
@@ -249,11 +248,11 @@ static inline uint8_t *mmbuf_append(struct mmbuf *mmbuf, uint32_t len)
  *
  * @warning @p len must be less than or equal to @ref mmbuf_available_space_at_start().
  *
- * @param mmbuf     The mmbuf to operate on.
- * @param data      The data to be prepended.
- * @param len       Length of data to be prepended.
+ * @param mmbuf The mmbuf to operate on.
+ * @param data  The data to be prepended.
+ * @param len   Length of data to be prepended.
  */
-static inline void mmbuf_append_data(struct mmbuf *mmbuf, const uint8_t * data, uint32_t len)
+static inline void mmbuf_append_data(struct mmbuf *mmbuf, const uint8_t *data, uint32_t len)
 {
     uint8_t *dest = mmbuf_append(mmbuf, len);
     memcpy(dest, data, len);
@@ -262,8 +261,8 @@ static inline void mmbuf_append_data(struct mmbuf *mmbuf, const uint8_t * data, 
 /**
  * Remove data from the start of the mmbuf.
  *
- * @param mmbuf     mmbuf to operate on.
- * @param len       Length of data to remove.
+ * @param mmbuf mmbuf to operate on.
+ * @param len   Length of data to remove.
  *
  * @returns a pointer to the removed data or NULL if the mmbuf data length was less than @p len.
  */
@@ -287,8 +286,8 @@ static inline uint8_t *mmbuf_remove_from_start(struct mmbuf *mmbuf, uint32_t len
 /**
  * Remove data from the end of the mmbuf.
  *
- * @param mmbuf     mmbuf to operate on.
- * @param len       Length of data to remove.
+ * @param mmbuf mmbuf to operate on.
+ * @param len   Length of data to remove.
  *
  * @returns a pointer to the removed data or NULL if the mmbuf data length was less than @p len.
  */
@@ -311,8 +310,8 @@ static inline uint8_t *mmbuf_remove_from_end(struct mmbuf *mmbuf, uint32_t len)
 /**
  * Truncate the mmbuf data to the given length.
  *
- * @param mmbuf     mmbuf to operate on.
- * @param len       New data length. (Must be less than or equal to the data length
+ * @param mmbuf mmbuf to operate on.
+ * @param len   New data length. (Must be less than or equal to the data length
  *                  of the mmbuf).
  */
 static inline void mmbuf_truncate(struct mmbuf *mmbuf, uint32_t len)
@@ -320,7 +319,6 @@ static inline void mmbuf_truncate(struct mmbuf *mmbuf, uint32_t len)
     MMOSAL_ASSERT(len <= mmbuf->data_len);
     mmbuf->data_len = len;
 }
-
 
 /* --------------------------------------------------------------------------------------------- */
 
@@ -342,7 +340,7 @@ struct mmbuf_list
  * Initialization function for @ref mmbuf_list, for cases where @c MMBUF_LIST_INIT
  * cannot be used.
  *
- * @param list  The mmbuf_list to init.
+ * @param list The mmbuf_list to init.
  */
 static inline void mmbuf_list_init(struct mmbuf_list *list)
 {
@@ -380,7 +378,7 @@ bool mmbuf_list_remove(struct mmbuf_list *list, struct mmbuf *mmbuf);
 /**
  * Remove the mmbuf at the head of the list and return it.
  *
- * @param list  The list to dequeue from.
+ * @param list The list to dequeue from.
  *
  * @returns the dequeued mmbuf, or @c NULL if the list is empty.
  */
@@ -389,7 +387,7 @@ struct mmbuf *mmbuf_list_dequeue(struct mmbuf_list *list);
 /**
  * Remove the mmbuf at the tail of the list and return it.
  *
- * @param list  The list to dequeue from.
+ * @param list The list to dequeue from.
  *
  * @returns the dequeued mmbuf, or @c NULL if the list is empty.
  */
@@ -398,7 +396,7 @@ struct mmbuf *mmbuf_list_dequeue_tail(struct mmbuf_list *list);
 /**
  * Remove all mmbufs from the list and return as a linked list.
  *
- * @param list  The list to dequeue from.
+ * @param list The list to dequeue from.
  *
  * @returns the dequeued mmbufs, or @c NULL if the list is empty.
  */
@@ -414,7 +412,7 @@ static inline struct mmbuf *mmbuf_list_dequeue_all(struct mmbuf_list *list)
 /**
  * Checks whether the given mmbuf list is empty.
  *
- * @param list  The list to check.
+ * @param list The list to check.
  *
  * @returns @c true if the list is empty, else @c false.
  */
@@ -426,7 +424,7 @@ static inline bool mmbuf_list_is_empty(struct mmbuf_list *list)
 /**
  * Returns the head of the mmbuf list.
  *
- * @param list  The list to peek into.
+ * @param list The list to peek into.
  *
  * @returns the mmbuf at the head of the list.
  */
@@ -438,7 +436,7 @@ static inline struct mmbuf *mmbuf_list_peek(struct mmbuf_list *list)
 /**
  * Returns the tail of the mmbuf list.
  *
- * @param list  The list to peek into.
+ * @param list The list to peek into.
  *
  * @returns the mmbuf at the tail of the list.
  */
@@ -450,7 +448,7 @@ static inline struct mmbuf *mmbuf_list_peek_tail(struct mmbuf_list *list)
 /**
  * Free all the packets in the given list and reset the list to empty state.
  *
- * @param list  The list to clear.
+ * @param list The list to clear.
  */
 void mmbuf_list_clear(struct mmbuf_list *list);
 

@@ -13,8 +13,8 @@
  * framework.
  *
  * The Morse Micro Porting Assistant is a tool that assists with validating OSAL, HALs, and
- * platform hardware. It runs a sequence of tests and displays the results of each along with
- * information about potential causes on failure.
+ * platform hardware necessary for communicating with a Morse Micro chip. It runs a sequence of
+ * tests and displays the results of each along with information about potential causes on failure.
  *
  * This tool has been provided as an example application on the Morse Micro reference platforms.
  * Running this application on a known-good platform should result in a 100% pass rate.
@@ -40,9 +40,7 @@ extern const struct test_step test_step_os_task_creation;               /**< Tes
 
 extern const struct test_step test_step_mmhal_wlan_init;                /**< Test definition */
 extern const struct test_step test_step_mmhal_wlan_hard_reset;          /**< Test definition */
-extern const struct test_step test_step_mmhal_wlan_send_training_seq;   /**< Test definition */
-extern const struct test_step test_step_device_ready;                   /**< Test definition */
-extern const struct test_step test_step_set_spi_mode;                   /**< Test definition */
+extern const struct test_step test_step_mmhal_wlan_sdio_startup;        /**< Test definition */
 extern const struct test_step test_step_read_chip_id;                   /**< Test definition */
 extern const struct test_step test_step_bulk_write_read;                /**< Test definition */
 extern const struct test_step test_step_raw_tput;                       /**< Test definition */
@@ -50,7 +48,7 @@ extern const struct test_step test_step_raw_tput;                       /**< Tes
 extern const struct test_step test_step_mmhal_wlan_validate_fw;         /**< Test definition */
 extern const struct test_step test_step_mmhal_wlan_validate_bcf;        /**< Test definition */
 
-extern const struct test_step test_step_enable_leds;                    /**< Test definition */
+extern const struct test_step test_step_verify_busy_pin;                /**< Test definition */
 
 
 /** Array of test steps. */
@@ -61,15 +59,13 @@ static const struct test_step * const test_steps[] = {
     &test_step_os_task_creation,
     &test_step_mmhal_wlan_init,
     &test_step_mmhal_wlan_hard_reset,
-    &test_step_mmhal_wlan_send_training_seq,
-    &test_step_set_spi_mode,
-    &test_step_device_ready,
+    &test_step_mmhal_wlan_sdio_startup,
     &test_step_read_chip_id,
+    &test_step_verify_busy_pin,
     &test_step_bulk_write_read,
     &test_step_raw_tput,
     &test_step_mmhal_wlan_validate_fw,
     &test_step_mmhal_wlan_validate_bcf,
-    &test_step_enable_leds,
 };
 
 /** Counters to track test runs. */
@@ -161,6 +157,11 @@ static void run_test_steps(const struct test_step * const steps[], size_t num_st
  */
 void app_main(void)
 {
+    mmhal_init();
+    /* Having deep sleep enabled can complicate debugging. Given the purpose of this applications
+     * is to validate that you can communicate to the MM-Chip it will be disabled by default. */
+    mmhal_set_deep_sleep_veto(MMHAL_VETO_ID_APP_MIN);
+
     struct test_counters ctrs = { 0 };
     unsigned num_tests = sizeof(test_steps)/sizeof(test_steps[0]);
 

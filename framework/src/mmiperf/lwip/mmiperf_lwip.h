@@ -10,12 +10,11 @@
 #include "../common/mmiperf_private.h"
 #include "lwip/pbuf.h"
 
-
 /**
  * Get a pbuf containing an iperf payload.
  *
- * @param offset    The numerical offset that the payload should start at.
- * @param len       Length of data to put into the pbuf.
+ * @param offset The numerical offset that the payload should start at.
+ * @param len    Length of data to put into the pbuf.
  *
  * @returns a pbuf containing the data on success or @c NULL on failure.
  */

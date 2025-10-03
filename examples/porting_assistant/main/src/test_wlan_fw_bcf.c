@@ -169,9 +169,9 @@ static enum test_result execute_fw_bcf_test(file_read_fn_t file_read_fn,
     }
 
     TEST_LOG_APPEND(
-        "%s invalid or ended too soon (EOF marker not found)\n"
+        "%s invalid or ended too soon (EOF marker not found after %u TLVs).\n"
         "Check that you have provided a valid %s file and review your implementation\n"
-        "of %s().\n", type, type, file_read_fn_name);
+        "of %s().\n", type, num_tlvs, type, file_read_fn_name);
     return TEST_FAILED_NON_CRITICAL;
 }
 

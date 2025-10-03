@@ -96,7 +96,7 @@ static bool session_has_timed_out(struct iperf_server_state_udp *server_state)
 }
 
 static struct iperf_server_session_udp *get_free_session_slot(
-        struct iperf_server_state_udp *server_state)
+    struct iperf_server_state_udp *server_state)
 {
     /* For now we only support a single session. */
     struct iperf_server_session_udp *session = &(server_state->session);
@@ -215,7 +215,7 @@ static void iperf_udp_recv_task(void *arg)
                 else
                 {
                     packet_id = (int64_t)(((uint64_t)FreeRTOS_ntohl(hdr->id_hi) << 32) |
-                                (uint64_t)FreeRTOS_ntohl(hdr->id_lo));
+                                          (uint64_t)FreeRTOS_ntohl(hdr->id_lo));
                 }
 
                 /* A negative packet ID indicates that this is the final packet. */
@@ -260,15 +260,16 @@ static void iperf_udp_recv_task(void *arg)
 
         if (final_packet)
         {
-            uint32_t duration_ms =
-                server_state->base.last_rx_time_ms - server_state->base.time_started_ms;
+            /* Handle the local report if this is the first time receiving the final packet. */
             if (session->next_packet_id >= 0)
             {
+                uint32_t duration_ms =
+                    server_state->base.last_rx_time_ms - server_state->base.time_started_ms;
                 iperf_finalize_report_and_invoke_callback(&server_state->base, duration_ms,
                                                           MMIPERF_UDP_DONE_SERVER);
+                session->next_packet_id = -1;
             }
 
-            session->next_packet_id = -1;
             final_packet = false;
 
             /* Send server report if not a multicast address */
@@ -692,7 +693,7 @@ mmiperf_handle_t mmiperf_start_udp_client(const struct mmiperf_client_args *args
         }
     }
 #else
-        MM_UNUSED(ret);
+    MM_UNUSED(ret);
 #endif
 
     if (s->args.server_port == 0)
@@ -734,7 +735,7 @@ mmiperf_handle_t mmiperf_start_udp_client(const struct mmiperf_client_args *args
      * iterations. */
     (void)atomic_fetch_add(&session_counter, 1);
     s->local_port = IPERF_UDP_CLIENT_LOCAL_PORT_RANGE_BASE +
-                    (session_counter & (IPERF_UDP_CLIENT_LOCAL_PORT_RANGE_SIZE - 1));
+        (session_counter & (IPERF_UDP_CLIENT_LOCAL_PORT_RANGE_SIZE - 1));
 
     s->udp_socket =
         FreeRTOS_socket((s->server_addr.xIs_IPv6 ? FREERTOS_AF_INET6 : FREERTOS_AF_INET),

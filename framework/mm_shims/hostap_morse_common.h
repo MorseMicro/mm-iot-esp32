@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <endian.h>
 #include <stdint.h>
 
 /*
@@ -20,8 +21,20 @@
 #define __BYTE_ORDER __LITTLE_ENDIAN
 #endif
 
+#ifndef bswap_16
 #define bswap_16(x) __builtin_bswap16(x)
+#endif
+
+#ifndef bswap_32
 #define bswap_32(x) __builtin_bswap32(x)
+#endif
+
+#if !defined(htonl)
+#define htonl(x) htobe32(x)
+#endif
+#if !defined(ntohl)
+#define ntohl(x) be32toh(x)
+#endif
 
 #define INET_ADDRSTRLEN   16
 #define INET6_ADDRSTRLEN  46
@@ -72,6 +85,10 @@ const char *inet_ntop (int __af, const void *__cp, char *__buf, int __len);
 #define aes_decrypt mmint_aes_decrypt
 #define aes_decrypt_deinit mmint_aes_decrypt_deinit
 #define aes_decrypt_init mmint_aes_decrypt_init
+#define aes_encrypt mmint_aes_encrypt
+#define aes_encrypt_deinit mmint_aes_encrypt_deinit
+#define aes_encrypt_init mmint_aes_encrypt_init
+#define aes_wrap mmint_aes_wrap
 #define crypto_bignum_add mmint_crypto_bignum_add
 #define crypto_bignum_addmod mmint_crypto_bignum_addmod
 #define crypto_bignum_cmp mmint_crypto_bignum_cmp

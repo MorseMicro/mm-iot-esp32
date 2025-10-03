@@ -12,6 +12,8 @@
 #include "rom/ets_sys.h"
 #include "esp_debug_helpers.h"
 #include "esp_private/startup_internal.h"
+#include "esp_idf_version.h"
+#include "esp_timer.h"
 
 #include "mmosal.h"
 #include "mmhal.h"
@@ -124,7 +126,11 @@ void mmosal_impl_assert(void)
 /* Function to be called as part of the secondary initialization. See [System
  * Initialization](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/startup.html#system-initialization)
  * for more information. */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+ESP_SYSTEM_INIT_FN(mmosal_dump_failure_info, SECONDARY, BIT(0), 999)
+#else
 ESP_SYSTEM_INIT_FN(mmosal_dump_failure_info, BIT(0), 999)
+#endif
 {
     if (preserved_failure_info.magic == ASSERT_INFO_MAGIC)
     {
@@ -549,61 +555,124 @@ uint32_t mmosal_ticks_per_second(void)
 
 /* --------------------------------------------------------------------------------------------- */
 
-struct mmosal_timer *mmosal_timer_create(const char *name, uint32_t timer_period, bool auto_reload,
+/**
+ * @struct mmosal_timer
+ * @brief Structure representing a timer in the MMOSAL (Morse Micro OS Abstraction Layer)
+ *
+ * This structure encapsulates the necessary information for managing an ESP timer.
+ */
+struct mmosal_timer
+{
+    esp_timer_handle_t handle;    /**< ESP timer handle. */
+    void *arg;                    /**< User-provided argument to be passed to the callback. */
+    timer_callback_t callback;    /**< Function to be called when the timer expires. */
+    bool auto_reload;             /**< If true, the timer will auto restart after expiring. */
+    uint64_t period_us;           /**< Timer period in microseconds. */
+};
+
+static void internal_timer_callback(void *arg)
+{
+    struct mmosal_timer *timer = (struct mmosal_timer *)arg;
+    if (timer && timer->callback)
+    {
+        timer->callback(timer);
+    }
+}
+
+struct mmosal_timer *mmosal_timer_create(const char *name, uint32_t timer_period_ms,
+                                         bool auto_reload,
                                          void *arg, timer_callback_t callback)
 {
-    /*
-     * The software timer callback functions execute in the context of a task that is
-     * created automatically when the FreeRTOS scheduler is started. Therefore, it is essential that
-     * software timer callback functions never call FreeRTOS API functions that will result in the
-     * calling task entering the Blocked state. It is ok to call functions such as xQueueReceive(), but
-     * only if the function’s xTicksToWait parameter (which specifies the function’s block time) is set
-     * to 0. It is not ok to call functions such as vTaskDelay(), as calling vTaskDelay() will always
-     * place the calling task into the Blocked state.
-     */
-    return (struct mmosal_timer*)xTimerCreate(name, pdMS_TO_TICKS(timer_period),
-                                              (UBaseType_t)auto_reload, arg,
-                                              (TimerCallbackFunction_t)callback);
+    esp_timer_create_args_t timer_args = {
+        .callback = internal_timer_callback,
+        .arg = NULL,
+        .name = name,
+        .skip_unhandled_events = true,
+        .dispatch_method = ESP_TIMER_TASK,
+    };
+
+    struct mmosal_timer *timer = mmosal_malloc(sizeof(struct mmosal_timer));
+    if (timer == NULL)
+    {
+        return NULL;
+    }
+
+    timer->arg = arg;
+    timer->callback = callback;
+    timer->auto_reload = auto_reload;
+    timer->period_us = timer_period_ms * 1000ULL;
+    timer_args.arg = timer;
+
+    if (esp_timer_create(&timer_args, &timer->handle) != ESP_OK)
+    {
+        mmosal_free(timer);
+        return NULL;
+    }
+
+    return timer;
 }
 
 void mmosal_timer_delete(struct mmosal_timer *timer)
 {
     if (timer != NULL)
     {
-        BaseType_t ret = xTimerDelete((TimerHandle_t)timer, 0);
-        configASSERT(ret == pdPASS);
+        esp_timer_stop(timer->handle);
+        esp_timer_delete(timer->handle);
+        mmosal_free(timer);
     }
 }
 
 bool mmosal_timer_start(struct mmosal_timer *timer)
 {
-    BaseType_t ret = xTimerStart((TimerHandle_t)timer, 0);
+    MMOSAL_DEV_ASSERT(timer);
 
-    return (ret == pdPASS);
+    if (timer->auto_reload)
+    {
+        return esp_timer_start_periodic(timer->handle, timer->period_us) == ESP_OK;
+    }
+    else
+    {
+        return esp_timer_start_once(timer->handle, timer->period_us) == ESP_OK;
+    }
 }
 
 bool mmosal_timer_stop(struct mmosal_timer *timer)
 {
-    BaseType_t ret = xTimerStop((TimerHandle_t)timer, 0);
+    MMOSAL_DEV_ASSERT(timer);
 
-    return (ret == pdPASS);
+    return esp_timer_stop(timer->handle) == ESP_OK;
 }
 
-bool mmosal_timer_change_period(struct mmosal_timer *timer, uint32_t new_period)
+bool mmosal_timer_change_period(struct mmosal_timer *timer, uint32_t new_period_ms)
 {
-    BaseType_t ret = xTimerChangePeriod((TimerHandle_t)timer, pdMS_TO_TICKS(new_period), 0);
+    MMOSAL_DEV_ASSERT(timer);
 
-    return (ret == pdPASS);
+    timer->period_us = new_period_ms * 1000ULL;
+    return esp_timer_restart(timer->handle, timer->period_us) == ESP_OK;
 }
 
 void *mmosal_timer_get_arg(struct mmosal_timer *timer)
 {
-    return pvTimerGetTimerID((TimerHandle_t)timer);
+    MMOSAL_DEV_ASSERT(timer);
+
+    return timer->arg;
 }
 
 bool mmosal_is_timer_active(struct mmosal_timer *timer)
 {
-    BaseType_t ret = xTimerIsTimerActive((TimerHandle_t)timer);
+    MMOSAL_DEV_ASSERT(timer);
 
-    return (ret != pdFALSE);
+    return esp_timer_is_active(timer->handle);
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+int mmosal_printf(const char *format, ...)
+{
+    int ret;
+    va_list args;
+    va_start(args, format);
+    ret = vprintf(format, args);
+    va_end(args);
+    return ret;
 }

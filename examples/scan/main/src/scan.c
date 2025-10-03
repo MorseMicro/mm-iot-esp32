@@ -308,8 +308,8 @@ static void scan_complete_callback(enum mmwlan_scan_state state, void *arg)
 void app_print_version_info(void)
 {
     enum mmwlan_status status;
-    struct mmwlan_version version;
-    struct mmwlan_bcf_metadata bcf_metadata;
+    struct mmwlan_version version = {0};
+    struct mmwlan_bcf_metadata bcf_metadata = {0};
 
     printf("-----------------------------------\n");
 
@@ -340,6 +340,7 @@ void app_print_version_info(void)
     printf("  Morselib version:        %s\n", version.morselib_version);
     printf("  Morse firmware version:  %s\n", version.morse_fw_version);
     printf("  Morse chip ID:           0x%04lx\n", version.morse_chip_id);
+    printf("  Morse chip name:         %s\n", version.morse_chip_id_string);
     printf("-----------------------------------\n");
 
     MMOSAL_ASSERT(status == MMWLAN_SUCCESS);
@@ -352,7 +353,6 @@ void app_print_version_info(void)
 void app_main(void)
 {
     enum mmwlan_status status;
-    struct mmwlan_version version;
     const struct mmwlan_s1g_channel_list* channel_list;
 
     printf("\n\nMorse Scan Demo (Built "__DATE__ " " __TIME__ ")\n\n");

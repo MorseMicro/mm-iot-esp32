@@ -42,8 +42,6 @@
 #include "lwip/ip_addr.h"
 #include "lwip/tcp.h"
 
-
-
 /* Currently, only TCP is implemented */
 #if LWIP_TCP && LWIP_CALLBACK_API
 
@@ -69,7 +67,9 @@ struct iperf_state_tcp
 
 static err_t iperf_start_tcp_server_impl(const struct mmiperf_server_args *args,
                                          struct iperf_state_tcp **state);
+
 static err_t iperf_tcp_poll(void *arg, struct tcp_pcb *tpcb);
+
 static void iperf_tcp_err(void *arg, err_t err);
 
 /** Close an iperf tcp session */
@@ -134,7 +134,7 @@ iperf_tcp_client_send_more(struct iperf_state_tcp *conn)
             /* this session is time-limited */
             uint32_t now = sys_now();
             uint32_t diff_ms = now - conn->base.time_started_ms;
-            uint32_t time = (uint32_t) - (int32_t)lwip_htonl(conn->settings.amount);
+            uint32_t time = (uint32_t)-(int32_t)lwip_htonl(conn->settings.amount);
             uint32_t time_ms = time * 10;
 
             if (diff_ms >= time_ms)
@@ -322,7 +322,8 @@ iperf_tx_start_impl(const struct mmiperf_client_args *args, struct iperf_setting
     }
 
     LWIP_DEBUGF(LWIP_DBG_LEVEL_ALL, ("Starting TCP iperf client to %s:%u, amount %ld\n",
-                args->server_addr, server_port, (int32_t)ntohl(settings->amount)));
+                                     args->server_addr, server_port,
+                                     (int32_t)ntohl(settings->amount)));
 
     client_conn = (struct iperf_state_tcp *)IPERF_ALLOC(struct iperf_state_tcp);
     if (client_conn == NULL)

@@ -116,6 +116,13 @@ enum mmwlan_status
 /** Default value for the @c scan_interval_limit_s field of @ref mmwlan_sta_args. */
 #define MMWLAN_DEFAULT_SCAN_INTERVAL_LIMIT_S (512)
 
+/** Default Beacon Interval in Soft AP mode (in TUs). */
+#define MMWLAN_DEFAULT_SOFTAP_BEACON_INTERVAL_TUS (100)
+
+/** Default DTIM period in Soft AP mode. */
+#define MMWLAN_DEFAULT_SOFTAP_DTIM_PERIOD (1)
+
+
 /**
  * The maximum length of a user-specified payload (bytes) for Standby status
  * frames.
@@ -189,6 +196,37 @@ enum mmwlan_twt_setup_command
     MMWLAN_TWT_SETUP_DEMAND
 };
 
+/** Enumeration of Duty Cycle modes. */
+enum mmwlan_duty_cycle_mode
+{
+    /** Duty cycle air time evenly spread. */
+    MMWLAN_DUTY_CYCLE_MODE_SPREAD = 0,
+    /** Duty cycle air time available in burst. */
+    MMWLAN_DUTY_CYCLE_MODE_BURST  = 1,
+};
+
+/** Enumeration of Linux 4-address mode settings. */
+enum mmwlan_4addr_mode
+{
+    MMWLAN_4ADDR_MODE_DISABLED,
+    MMWLAN_4ADDR_MODE_ENABLED,
+};
+
+/**
+ * Duty cycle configuration and statistics
+ */
+struct mmwlan_duty_cycle_stats
+{
+    /** Target duty cycle in 100th of a %, i.e. 1..10000. */
+    uint32_t duty_cycle;
+    /** Configured duty cycle mode, see @ref mmwlan_duty_cycle_mode */
+    enum mmwlan_duty_cycle_mode mode;
+    /** Airtime remaining (us) - applicable in burst mode only */
+    uint32_t burst_airtime_remaining_us;
+    /** Burst window duration (us) - applicable in burst mode only */
+    uint32_t burst_window_duration_us;
+};
+
 /**
  * @defgroup MMWLAN_REGDB    WLAN Regulatory Database API
  *
@@ -228,11 +266,14 @@ struct mmwlan_s1g_channel
     uint32_t airtime_max_us;
 };
 
+/** Length of the two character country code string (null-terminated). */
+#define MMWLAN_COUNTRY_CODE_LEN 3
+
 /** A list of S1G channels supported by a given regulatory domain. */
 struct mmwlan_s1g_channel_list
 {
     /** Two character country code (null-terminated) used to identify the regulatory domain. */
-    uint8_t country_code[3];
+    uint8_t country_code[MMWLAN_COUNTRY_CODE_LEN];
     /** The number of channels in the list. */
     unsigned num_channels;
     /** The channel data. */
@@ -313,6 +354,8 @@ enum mmwlan_status mmwlan_set_channel_list(const struct mmwlan_s1g_channel_list 
 #define MMWLAN_MORSELIB_VERSION_MAXLEN  (32)
 /** Maximum length of the firmware version string. */
 #define MMWLAN_FW_VERSION_MAXLEN        (32)
+/** Maximum length of the chip id string. */
+#define MMWLAN_CHIP_ID_STRING_MAXLEN        (32)
 
 /** Structure for retrieving version information from the mmwlan subsystem. */
 struct mmwlan_version
@@ -323,6 +366,8 @@ struct mmwlan_version
     char morse_fw_version[MMWLAN_FW_VERSION_MAXLEN];
     /** Morse transceiver chip ID. */
     uint32_t morse_chip_id;
+    /** Morse transceiver chip ID user-friendly string. */
+    char morse_chip_id_string[MMWLAN_CHIP_ID_STRING_MAXLEN];
 };
 
 /**
@@ -449,6 +494,9 @@ enum mmwlan_status mmwlan_set_subbands_enabled(bool subbands_enabled);
 /**
  * Sets whether or not the 802.11 power save is enabled. Defaults to @ref MMWLAN_PS_ENABLED
  *
+ * @note It is recommended to keep power save enabled if the STA will be duty cycle limited,
+ *       @see mm_app_regdb.c for regulatory duty cycle limits.
+ *
  * @param mode   enum indicating which 802.11 power save mode to use.
  *
  * @return @ref MMWLAN_SUCCESS on success, else an appropriate error code.
@@ -527,10 +575,19 @@ struct mmwlan_scan_config
      *          include an SSID in the scan arguments (see @ref mmwlan_scan_args.ssid).
      */
     bool ndp_probe_enabled;
+
+    /**
+     * Set the home channel dwell time to use for scans that are requested internally within the
+     * mmwlan driver (e.g., when connecting or background scanning).
+     *
+     * @note This does not affect scans requested with the @ref mmwlan_scan_request().
+     */
+    uint32_t home_channel_dwell_time_ms;
 };
 
 /** Initializer for @ref mmwlan_scan_config. */
-#define MMWLAN_SCAN_CONFIG_INIT { MMWLAN_SCAN_DEFAULT_DWELL_TIME_MS, false }
+#define MMWLAN_SCAN_CONFIG_INIT \
+    { MMWLAN_SCAN_DEFAULT_DWELL_TIME_MS, false, MMWLAN_SCAN_DEFAULT_DWELL_ON_HOME_MS }
 
 /**
  * Update the scan configuration with the given settings.
@@ -584,7 +641,7 @@ struct mmwlan_twt_config_args
  * Add configurations for Target Wake Time (TWT).
  *
  * @note This is used to add TWT configuration for a new TWT agreement.
- *       This function should be invoked before @ref mmwlan_sta_enable.
+ *       This function must be invoked before @ref mmwlan_sta_enable.
  *
  * @param twt_config_args TWT configuration arguments @ref mmwlan_twt_config_args.
  *
@@ -652,6 +709,25 @@ enum mmwlan_mcs10_mode
  * @return @ref MMWLAN_SUCCESS on success, else an appropriate error code.
  */
 enum mmwlan_status mmwlan_set_mcs10_mode(enum mmwlan_mcs10_mode mcs10_mode);
+
+/**
+ * Configure the duty cycle behavior for air time distribution.
+ *
+ * @param  duty_cycle_mode Sets the duty cycle mode. See @ref mmwlan_duty_cycle_mode for what each
+ *                         mode means.
+ *
+ * @return                 @ref MMWLAN_SUCCESS on success, else an appropriate error code.
+ */
+enum mmwlan_status mmwlan_set_duty_cycle_mode(enum mmwlan_duty_cycle_mode duty_cycle_mode);
+
+/**
+ * Retrieve the transmit duty cycle configuration and statistics.
+ *
+ * @param stats Pointer to a duty cycle statistics structure.
+ *
+ * @return      @ref MMWLAN_SUCCESS on success, else an appropriate error code.
+ */
+enum mmwlan_status mmwlan_get_duty_cycle_stats(struct mmwlan_duty_cycle_stats *stats);
 
 /**
  * Arguments data structure for @ref mmwlan_boot().
@@ -740,7 +816,7 @@ struct mmwlan_scan_result
     const uint8_t *ies;
     /** Value of the Beacon Interval field. */
     uint16_t beacon_interval;
-    /** Value of the Capability Information  field. */
+    /** Value of the Capability Information field. */
     uint16_t capability_info;
     /** Length of the Information Elements (@c ies). */
     uint16_t ies_len;
@@ -761,6 +837,50 @@ typedef void (*mmwlan_scan_rx_cb_t)(const struct mmwlan_scan_result *result, voi
 
 /** STA status callback function prototype. */
 typedef void (*mmwlan_sta_status_cb_t)(enum mmwlan_sta_state sta_state);
+
+/**
+ * Enumeration of STA events.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
+ */
+enum mmwlan_sta_event
+{
+    /** The STA is starting a scan. */
+    MMWLAN_STA_EVT_SCAN_REQUEST,
+    /** The STA has finished a scan. */
+    MMWLAN_STA_EVT_SCAN_COMPLETE,
+    /** The STA has aborted a scan early. */
+    MMWLAN_STA_EVT_SCAN_ABORT,
+    /** The STA is sending an authentication request to the AP. */
+    MMWLAN_STA_EVT_AUTH_REQUEST,
+    /** The STA is sending an association request to the AP. */
+    MMWLAN_STA_EVT_ASSOC_REQUEST,
+    /** The STA is sending a de-authorization request to the AP. */
+    MMWLAN_STA_EVT_DEAUTH_TX,
+    /**
+     * The Supplicant IEEE 802.1X Controlled Port is now open meaning that
+     * the STA is fully authenticated and data transmission can begin.
+     * */
+    MMWLAN_STA_EVT_CTRL_PORT_OPEN,
+    /**  The Supplicant IEEE 802.1X Controlled Port is now closed. */
+    MMWLAN_STA_EVT_CTRL_PORT_CLOSED,
+};
+
+/** Argument passed to the STA event callback. */
+struct mmwlan_sta_event_cb_args
+{
+    /** The event that triggered the callback. */
+    enum mmwlan_sta_event event;
+};
+
+/**
+ * STA event callback prototype.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
+ */
+typedef void (*mmwlan_sta_event_cb_t)(const struct mmwlan_sta_event_cb_args *sta_event, void *arg);
 
 /**
  * Arguments data structure for @ref mmwlan_sta_enable().
@@ -857,6 +977,35 @@ struct mmwlan_sta_args
      * If this is 0 then the @ref MMWLAN_DEFAULT_SCAN_INTERVAL_LIMIT_S will be used.
      */
     uint16_t scan_interval_limit_s;
+    /**
+     * Extra Information Elements to include in association request frames.
+     * Should be @c NULL if @c extra_assoc_ies_len is zero.
+     * It is the caller's responsibility to handle potentially duplicate IEs.
+     * It is the caller's responsibility to free this buffer after calling @ref mmwlan_sta_enable().
+     */
+    uint8_t *extra_assoc_ies;
+    /** Length of @c extra_assoc_ies */
+    size_t extra_assoc_ies_len;
+    /**
+     * STA event callback with a user-defined opaque parameter. May be @c NULL.
+     *
+     * @warning BETA NOTICE: This is beta API that is under development;
+     *          breaking changes may be introduced in future releases.
+     */
+    mmwlan_sta_event_cb_t sta_evt_cb;
+    /**
+     * STA event callback argument to be passed to @c sta_evt_cb. May optionally be @c NULL.
+     * The value of this parameter must remain valid during the lifetime of the connection.
+     *
+     * @warning BETA NOTICE: This is beta API that is under development;
+     *          breaking changes may be introduced in future releases.
+     */
+    void *sta_evt_cb_arg;
+    /**
+     * Whether the station should use Linux 4-address mode. When connected to a Linux AP in
+     * 4-address mode, this will trigger the AP to move the STA to a separate virtual interface.
+     */
+    enum mmwlan_4addr_mode use_4addr;
 };
 
 /**
@@ -868,7 +1017,8 @@ struct mmwlan_sta_args
     { { 0 }, 0, { 0 }, MMWLAN_OPEN, { 0 }, 0, MMWLAN_PMF_REQUIRED, -1, MMWLAN_STA_TYPE_NON_SENSOR, \
       { 0 }, MMWLAN_CAC_DISABLED, DEFAULT_BGSCAN_SHORT_INTERVAL_S, DEFAULT_BGSCAN_THRESHOLD_DBM,   \
       DEFAULT_BGSCAN_LONG_INTERVAL_S, NULL, NULL,                                                  \
-      MMWLAN_DEFAULT_SCAN_INTERVAL_BASE_S, MMWLAN_DEFAULT_SCAN_INTERVAL_LIMIT_S }
+      MMWLAN_DEFAULT_SCAN_INTERVAL_BASE_S, MMWLAN_DEFAULT_SCAN_INTERVAL_LIMIT_S,                   \
+      NULL, 0, NULL, NULL, MMWLAN_4ADDR_MODE_DISABLED }
 
 /**
  * Enable station mode.
@@ -879,11 +1029,18 @@ struct mmwlan_sta_args
  *
  * @note The STA status callback (@p sta_status_cb) must not block and MMWLAN API functions
  *       may not be invoked from the callback.
+ * @note A copy of @p args->extra_assoc_ies buffer will be made if @p args->extra_assoc_ies_len is
+ *       non-zero. Caller is responsible for freeing the buffer in @p args after this function is called.
  *
  * @warning Channel list must be set before enabling station mode. @ref mmwlan_set_channel_list().
  *
+ * @deprecated  The @c sta_status_cb parameter should not be used. Please use
+ *              @c mmwlan_sta_args.ext_sta_status_cb as the preferred callback method.
+ *
  * @param args              STA arguments (e.g., SSID, etc.). See @ref mmwlan_sta_args.
- * @param sta_status_cb     Optional callback to be invoked on STA state changes. May be @c NULL.
+ * @param sta_status_cb     Optional callback to be invoked on STA state changes.
+ *                          May be @c NULL. Must be @c NULL if @c args->ext_sta_status_cb is not @c
+ *                          NULL.
  *
  * @return @ref MMWLAN_SUCCESS on success, else an appropriate error code.
  */
@@ -895,13 +1052,97 @@ enum mmwlan_status mmwlan_sta_enable(const struct mmwlan_sta_args *args,
  *
  * This will disconnect from the AP. It will also shut down the transceiver if nothing else
  * is holding it open. Note that if the transceiver was booted by @c mmwlan_boot() then
- * this function will shut down the transceiver.
+ * this function will not shut down the transceiver.
  *
- * @return @ref MMWLAN_SUCCESS if successful and the transceiver was also shut down,
- *         @ref MMWLAN_SHUTDOWN_BLOCKED if successful and the transceiver was not shut down,
- *         else an appropriate error code.
+ * @return @ref MMWLAN_SUCCESS if successful, else an appropriate error code.
  */
 enum mmwlan_status mmwlan_sta_disable(void);
+
+/** Enumeration of DPP events. */
+enum mmwlan_dpp_event
+{
+    /** DPP push button result. */
+    MMWLAN_DPP_EVT_PB_RESULT,
+};
+
+/** Enumeration of results for @c MMWLAN_DPP_EVT_PB_RESULT. */
+enum mmwlan_dpp_pb_result
+{
+    /** DPP push button process was successful. */
+    MMWLAN_DPP_PB_RESULT_SUCCESS,
+    /** An error occurred during the DPP push button process. */
+    MMWLAN_DPP_PB_RESULT_ERROR,
+    /** A session overlap occurred during the DPP push button process. */
+    MMWLAN_DPP_PB_RESULT_SESSION_OVERLAP,
+};
+
+/**
+ * Structure passed back when a DPP event occurs.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
+ */
+struct mmwlan_dpp_cb_args
+{
+    /** The DPP event that has occurred. */
+    enum mmwlan_dpp_event event;
+    /** Union of arguments for DPP events. */
+    union
+    {
+        /** Argument for @c MMWLAN_DPP_EVT_PB_RESULT event. */
+        struct
+        {
+            /** Result of DPP push button. */
+            enum mmwlan_dpp_pb_result result;
+            /** SSID of the AP to connect to. May be @c NUlL. */
+            const uint8_t *ssid;
+            /** Length of the SSID. */
+            uint16_t ssid_len;
+            /** Passphrase, NULL terminated. May be @c NULL. */
+            const char *passphrase;
+        } pb_result;
+    } args;
+};
+
+/**
+ * Structure to hold the arguments used for the DPP process.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
+ */
+struct mmwlan_dpp_args
+{
+    /** DPP event callback prototype. */
+    void (*dpp_event_cb)(const struct mmwlan_dpp_cb_args *dpp_event, void *arg);
+    /** Optional user argument that will be passed back to the DPP event callback. */
+    void *dpp_event_cb_arg;
+};
+
+/**
+ * Function to start the Device Provisioning Protocol (DPP) process. This will return once DPP has
+ * successfully started. Feedback will be provided via the @c dpp_event_cb.
+ *
+ * @warning If this has been called @c mmwlan_dpp_stop() MUST be called before @c mmwlan_shutdown()
+ * is called.
+ *
+ * @param args Reference to the dpp arguments to use.
+ *
+ * @returns @c MMWLAN_SUCCESS on success, else an appropriate error code.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
+ */
+enum mmwlan_status mmwlan_dpp_start(const struct mmwlan_dpp_args *args);
+
+/**
+ * Function to stop the DPP process.
+ *
+ * @returns @c MMWLAN_SUCCESS on success, else an appropriate error code.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
+ */
+enum mmwlan_status mmwlan_dpp_stop(void);
 
 /**
  * Gets the current WLAN STA state.
@@ -912,7 +1153,9 @@ enum mmwlan_sta_state mmwlan_get_sta_state(void);
 
 /** Default value for @c mmwlan_scan_args.dwell_time_ms. Note that reducing the dwell time
  *  below this value may impact scan reliability. */
-#define MMWLAN_SCAN_DEFAULT_DWELL_TIME_MS (105)
+#define MMWLAN_SCAN_DEFAULT_DWELL_TIME_MS (30)
+/** Default time to dwell on home channel, in between scan channels */
+#define MMWLAN_SCAN_DEFAULT_DWELL_ON_HOME_MS (200)
 
 /** Minimum value for @c mmwlan_scan_args.dwell_time_ms. */
 #define MMWLAN_SCAN_MIN_DWELL_TIME_MS     (15)
@@ -941,9 +1184,10 @@ typedef void (*mmwlan_scan_complete_cb_t)(enum mmwlan_scan_state scan_state, voi
 struct mmwlan_scan_args
 {
     /**
-     * Time to dwell on a channel waiting for probe responses/beacons.
+     * Minimum time to dwell on a channel waiting for probe responses/beacons.
      *
-     * @note This includes the time it takes to actually tune to the channel.
+     * @note There is some additional delay applied on top of this to allow for tuning to each
+     *       channel and sending a probe request.
      */
     uint32_t dwell_time_ms;
     /**
@@ -960,6 +1204,12 @@ struct mmwlan_scan_args
     uint8_t ssid[MMWLAN_SSID_MAXLEN];
     /** Length of the SSID. */
     uint16_t ssid_len;
+    /**
+     * Time to dwell on home channel in between channels during a scan, to allow traffic
+     * to still pass. This will only perform while connected to an AP and is ignored otherwise.
+     * If set to 0, the device will not return to the home channel during the scan.
+     */
+    uint32_t dwell_on_home_ms;
 };
 
 /**
@@ -971,7 +1221,8 @@ struct mmwlan_scan_args
  * struct mmwlan_scan_args scan_args = MMWLAN_SCAN_ARGS_INIT;
  * @endcode
  */
-#define MMWLAN_SCAN_ARGS_INIT { MMWLAN_SCAN_DEFAULT_DWELL_TIME_MS, NULL, 0, { 0 }, 0 }
+#define MMWLAN_SCAN_ARGS_INIT \
+    { MMWLAN_SCAN_DEFAULT_DWELL_TIME_MS, NULL, 0, { 0 }, 0, MMWLAN_SCAN_DEFAULT_DWELL_ON_HOME_MS }
 
 /**
  * Structure to hold arguments specific to a given instance of a scan.
@@ -1029,6 +1280,166 @@ enum mmwlan_status mmwlan_scan_request(const struct mmwlan_scan_req *scan_req);
 enum mmwlan_status mmwlan_scan_abort(void);
 
 /**
+ * Data structure for communicating STA status information for stations connected to a Soft AP.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
+ */
+struct mmwlan_softap_sta_status
+{
+    /** Placeholder so that the struct is not empty. This will be added in future. */
+    uint8_t reserved;
+};
+
+/**
+ * Type definition for callback to be invoked on change in status of a connected STA.
+ *
+ * @param sta_status    The STA status information.
+ * @param arg           Opaque argument that was provided when the callback was registered.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
+ */
+typedef void (*mmwlan_softap_sta_status_cb_t)(const struct mmwlan_softap_sta_status *sta_status,
+                                              void *arg);
+
+/**
+ * Arguments data structure for @ref mmwlan_softap_enable().
+ *
+ * This structure should be initialized using @ref MMWLAN_SOFTAP_ARGS_INIT for sensible
+ * default values, particularly for forward compatibility with new releases that may add
+ * new fields to the struct. For example:
+ *
+ * @code{.c}
+ *     enum mmwlan_status status;
+ *     struct mmwlan_softap_args softap_args = MMWLAN_SOFTAP_ARGS_INIT;
+ *     // HERE: initialize arguments
+ *     status = mmwlan_softap_enable(&softap_args);
+ * @endcode
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
+ */
+struct mmwlan_softap_args
+{
+    /** SSID of the AP. */
+    uint8_t ssid[MMWLAN_SSID_MAXLEN];
+    /** Length of the SSID. */
+    uint16_t ssid_len;
+    /**
+     * Optional BSSID of the AP. If zero then the devices MAC address will be used.
+     *
+     * @warning The MAC address selection behavior may change in future.
+     */
+    uint8_t bssid[MMWLAN_MAC_ADDR_LEN];
+    /** Type of security to use. If @c MMWLAN_SAE then a @c passphrase must be specified. */
+    enum mmwlan_security_type security_type;
+    /** Passphrase (only used if @c security_type is @c MMWLAN_SAE, otherwise ignored. */
+    char passphrase[MMWLAN_PASSPHRASE_MAXLEN + 1];
+    /** Length of @c passphrase. May be zero if @c passphrase is null-terminated. */
+    uint16_t passphrase_len;
+    /** Protected Management Frame mode to use (802.11w) */
+    enum mmwlan_pmf_mode pmf_mode;
+    /**
+     * Preference list of enabled elliptic curve groups for SAE and OWE.
+     * By default (if this parameter is not set), the mandatory group 19 is preferred.
+     */
+    int sae_owe_ec_groups[MMWLAN_MAX_EC_GROUPS];
+    /**
+     * Operating Class to use (S1G or Global).
+     *
+     * The combination of this field and @c s1g_chan_num will be used
+     * to look up the appropriate entry in the channel list, which must have been previously
+     * provided using @ref mmwlan_set_channel_list().
+    */
+    uint16_t op_class;
+    /**
+     * S1G channel number of the channel to use.
+     *
+     * The combination of this field and @c op_class will be used
+     * to look up the appropriate entry in the channel list, which must have been previously
+     * provided using @ref mmwlan_set_channel_list().
+     */
+    uint16_t s1g_chan_num;
+    /**
+     * The Beacon period in units of TUs. A TU is equal to 1.024 ms.
+     *
+     * If zero then the default value, @ref MMWLAN_DEFAULT_SOFTAP_BEACON_INTERVAL_TUS, will be used.
+     */
+    uint16_t beacon_interval_tus;
+    /**
+     * The Delivery Traffic Indication Map (DTIM) interval in beacons.
+     *
+     * If zero then the default value, @ref MMWLAN_DEFAULT_SOFTAP_DTIM_PERIOD, will be used.
+     */
+    uint16_t dtim_period;
+    /**
+     * Bandwidth to use for the primary channel. This may be set to 0 to automatically select
+     * the highest primary bandwidth supported by the operating channel.
+     *
+     * @note This must not be greater than the bandwidth of the operating channel.
+     */
+    uint8_t pri_bw_mhz;
+    /**
+     * Index of the primary 1 Mhz channel within the operating channel. This must be less than
+     * the bandwidth of the operating channel.
+     */
+    uint8_t pri_1mhz_chan_idx;
+    /**
+     * Optional callback to be invoked when the status of a connected STA changes. May be
+     * set to @c NULL.
+     */
+    mmwlan_softap_sta_status_cb_t sta_status_cb;
+    /**
+     * Optional opaque argument to be passed to @c sta_status_cb. May optionally be @c NULL.
+     * The value of this parameter must remain valid during the lifetime of the Soft AP.
+     */
+    void *sta_status_cb_arg;
+};
+
+/**
+ * Initializer for @ref mmwlan_softap_args.
+ *
+ * @see mmwlan_softap_args
+ */
+#define MMWLAN_SOFTAP_ARGS_INIT                                                                  \
+    { { 0 }, 0, { 0 }, MMWLAN_OPEN, { 0 }, 0, MMWLAN_PMF_REQUIRED,                               \
+      { 0 }, 0, 0, 0, 0, 0, 0, NULL, NULL }
+
+
+/**
+ * Enable Soft AP mode.
+ *
+ * This will power on the transceiver then start Access Point mode.
+ *
+ * @warning Channel list must be set before enabling station mode. @ref mmwlan_set_channel_list().
+ *
+ * @param args              Arguments (e.g., SSID, etc.). See @ref mmwlan_softap_args.
+ *
+ * @return @ref MMWLAN_SUCCESS on success, else an appropriate error code.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
+ */
+enum mmwlan_status mmwlan_softap_enable(const struct mmwlan_softap_args *args);
+
+/**
+ * Disable Soft AP mode.
+ *
+ * This will disconnect any stations from the AP. It will also shut down the transceiver if nothing
+ * else is holding it open. Note that if the transceiver was booted by @c mmwlan_boot() then
+ * this function will not shut down the transceiver.
+ *
+ * @return @ref MMWLAN_SUCCESS if successful and the transceiver was also shut down,
+ *         @ref MMWLAN_SHUTDOWN_BLOCKED if successful and the transceiver was not shut down,
+ *         else an appropriate error code.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
+ */
+enum mmwlan_status mmwlan_softap_disable(void);
+
+/**
  * Gets the MAC address of this device.
  *
  * The MAC address address comes from one of the following sources, in descending priority order:
@@ -1073,6 +1484,18 @@ enum mmwlan_status mmwlan_get_bssid(uint8_t *bssid);
  */
 int32_t mmwlan_get_rssi(void);
 
+/**
+ * Sets the listen interval to be indicated in the association response frame. This informs the AP
+ * how often the STA will wake up. The AP uses the listen interval in determining the lifetime of
+ * frames that it buffers for a STA.
+ *
+ * @param[in] interval Interval value in beacon or short beacon units. e.g. 5 will set the listen
+ *            interval to the interval between 5 beacons. 0 will disable this feature.
+ *
+ * @returns @c MMWLAN_SUCCESS on success, else an appropriate error code.
+ */
+enum mmwlan_status mmwlan_set_listen_interval(uint16_t interval);
+
 /** @} */
 
 /**
@@ -1092,11 +1515,13 @@ int32_t mmwlan_get_rssi(void);
  * When enabled the chip will automatically respond to ARP requests with the specified
  * IPv4 address.
  *
+ * @note ARP offload can only be enabled for a STA with an active connection.
  * @note ARP offload is not supported for IPv6 addresses.
  *
  * @param arp_addr  The IPv4 address to respond with for ARP requests for this interface.
  *
- * @returns @ref MMWLAN_SUCCESS on success or @ref MMWLAN_ERROR on failure.
+ * @returns @ref MMWLAN_SUCCESS on success, @ref MMWLAN_UNAVAILABLE if the chip does not have a
+ *          valid connection, or @ref MMWLAN_ERROR on failure.
  */
 enum mmwlan_status mmwlan_enable_arp_response_offload(uint32_t arp_addr);
 
@@ -1357,6 +1782,9 @@ enum mmwlan_status mmwlan_set_whitelist_filter(const struct mmwlan_config_whitel
  * the host. By offloading features like ARP response, ARP refresh, TCP keep-alive, and DHCP lease
  * updates while in standby mode allows the host processor to sleep for longer resulting in better
  * power savings.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
  */
 
 /**
@@ -1387,6 +1815,9 @@ enum mmwlan_standby_exit_reason
  *
  * @param reason The reason we exited standby mode. See enum @ref mmwlan_standby_exit_reason.
  * @param arg    An opaque pointer passed from @ref mmwlan_standby_enter()
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
  */
 typedef void (*mmwlan_standby_exit_cb_t)(uint8_t reason, void *arg);
 
@@ -1412,6 +1843,9 @@ struct mmwlan_standby_enter_args
  * @param args   A pointer to the arguments for this function.
  *
  * @returns @ref MMWLAN_SUCCESS on success or @ref MMWLAN_ERROR on failure.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
  */
 enum mmwlan_status mmwlan_standby_enter(const struct mmwlan_standby_enter_args *args);
 
@@ -1425,10 +1859,18 @@ enum mmwlan_status mmwlan_standby_enter(const struct mmwlan_standby_enter_args *
  * Triggers @ref mmwlan_standby_exit_cb_t with reason @c MMWLAN_STANDBY_EXIT_REASON_NONE.
  *
  * @returns @ref MMWLAN_SUCCESS on success or @ref MMWLAN_ERROR on failure.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
  */
 enum mmwlan_status mmwlan_standby_exit(void);
 
-/** Arguments for @ref mmwlan_standby_set_status_payload  */
+/**
+ * Arguments for @ref mmwlan_standby_set_status_payload.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
+ */
 struct mmwlan_standby_set_status_payload_args
 {
     /** User data to append to the standby status packets */
@@ -1458,6 +1900,9 @@ struct mmwlan_standby_set_status_payload_args
  * @param args   A pointer to the arguments for this function.
  *
  * @returns @ref MMWLAN_SUCCESS on success or @ref MMWLAN_ERROR on failure.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
  */
 enum mmwlan_status mmwlan_standby_set_status_payload(
     const struct mmwlan_standby_set_status_payload_args *args);
@@ -1497,6 +1942,9 @@ struct mmwlan_standby_set_wake_filter_args
  * @param args   A pointer to the arguments for this function.
  *
  * @returns @ref MMWLAN_SUCCESS on success or @ref MMWLAN_ERROR on failure.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
  */
 enum mmwlan_status mmwlan_standby_set_wake_filter(
     const struct mmwlan_standby_set_wake_filter_args *args);
@@ -1544,6 +1992,9 @@ struct mmwlan_standby_config
  * @param config A pointer to the configuration structure. See @ref mmwlan_standby_config.
  *
  * @returns @ref MMWLAN_SUCCESS on success or @ref MMWLAN_ERROR on failure.
+ *
+ * @warning BETA NOTICE: This is beta API that is under development;
+ *          breaking changes may be introduced in future releases.
  */
 enum mmwlan_status mmwlan_standby_set_config(const struct mmwlan_standby_config *config);
 
@@ -1784,12 +2235,16 @@ void mmwlan_deinit(void);
 /**
  * The default minimum interval to wait after the last health check before triggering another.
  */
+#ifndef MMWLAN_DEFAULT_MIN_HEALTH_CHECK_INTERVAL_MS
 #define MMWLAN_DEFAULT_MIN_HEALTH_CHECK_INTERVAL_MS 60000
+#endif
 
 /**
  * The default maximum interval to wait after the last health check before triggering another.
  */
+#ifndef MMWLAN_DEFAULT_MAX_HEALTH_CHECK_INTERVAL_MS
 #define MMWLAN_DEFAULT_MAX_HEALTH_CHECK_INTERVAL_MS 120000
+#endif
 
 /**
  * Specify the upper and lower bound for the periodic health check interval. To guarantee a specific
@@ -2233,6 +2688,13 @@ struct mmwlan_stats_umac_data;
  */
 enum mmwlan_status mmwlan_get_umac_stats(struct mmwlan_stats_umac_data *stats_dest);
 
+/**
+ * Clear all current values of the UMAC statistics.
+ *
+ * @return @ref MMWLAN_SUCCESS
+ */
+enum mmwlan_status mmwlan_clear_umac_stats(void);
+
 /** @} */
 
 /** @} */
@@ -2262,7 +2724,9 @@ enum mmwlan_mcs
     MMWLAN_MCS_5,                   /**< MCS5 */
     MMWLAN_MCS_6,                   /**< MCS6 */
     MMWLAN_MCS_7,                   /**< MCS7 */
-    MMWLAN_MCS_MAX = MMWLAN_MCS_7   /**< Maximum supported MCS rate */
+    MMWLAN_MCS_8,                   /**< MCS8 */
+    MMWLAN_MCS_9,                   /**< MCS9 */
+    MMWLAN_MCS_MAX = MMWLAN_MCS_9   /**< Maximum supported MCS rate */
 };
 
 /** Enumeration of bandwidths. */

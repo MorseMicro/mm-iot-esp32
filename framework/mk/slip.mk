@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-SLIP_DIR = src/slip/
+SLIP_DIR = src/slip
 
 SLIP_SRCS_C += slip.c
 SLIP_SRCS_H += slip.h

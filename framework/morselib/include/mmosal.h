@@ -146,7 +146,7 @@ void *mmosal_calloc(size_t nitems, size_t size);
  *
  * @returns pointer to the allocated memory on success, or NULL on failure.
  */
-#define mmosal_malloc(size) mmosal_malloc_dbg(size, __FUNCTION__, __LINE__)
+#define mmosal_malloc(size) mmosal_malloc_dbg(size, __func__, __LINE__)
 #endif
 
 /**
@@ -210,18 +210,6 @@ struct mmosal_task *mmosal_task_create(mmosal_task_fn_t task_fn, void *argument,
  * @note With FreeRTOS deleted tasks will not be cleaned up until the idle task runs.
  */
 void mmosal_task_delete(struct mmosal_task *task);
-
-/**
- * Block until the given task has terminated.
- *
- * @param task  Handle of the task to wait for.
- *
- * @note With FreeRTOS deleted tasks will not be cleaned up until the idle task runs.
- *
- * @deprecated Do not invoke this function because it is deprecated and will be removed from
- *             the mmosal API in a future release.
- */
-void mmosal_task_join(struct mmosal_task *task);
 
 /**
  * Get the handle of the active task.
@@ -308,42 +296,6 @@ void mmosal_enable_interrupts(void);
  * @returns the name of the running task.
  */
 const char *mmosal_task_name(void);
-
-/**
- * Blocks the current task until a notification is received.
- *
- * Notifications can be sent using @ref mmosal_task_notify() or @ref mmosal_task_notify_from_isr().
- *
- * @param timeout_ms    The time to wait before giving up (or @c UINT32_MAX to wait forever).
- *
- * @returns @c true of a notification was received or @c false if it timed out.
- *
- * @see mmosal_task_notify()
- * @see mmosal_task_notify_from_isr()
- */
-bool mmosal_task_wait_for_notification(uint32_t timeout_ms);
-
-/**
- * Notifies a waiting task (@ref mmosal_task_wait_for_notification()) that it can continue.
- *
- * @warning Must not be called from ISR context.
- *
- * @param task  Handle of the task to notify.
- *
- * @see mmosal_task_wait_for_notification()
- */
-void mmosal_task_notify(struct mmosal_task *task);
-
-/**
- * Notifies a waiting task (@ref mmosal_task_wait_for_notification()) that it can continue.
- *
- * @warning Must only be called from ISR context.
- *
- * @param task  Handle of the task to notify.
- *
- * @see mmosal_task_wait_for_notification()
- */
-void mmosal_task_notify_from_isr(struct mmosal_task *task);
 
 /**
  * @}
@@ -904,6 +856,14 @@ bool mmosal_is_timer_active(struct mmosal_timer *timer);
 #define MMOSAL_FILEID 0
 #endif
 
+/**
+ * Maximum number of failure records to buffer (must be a power of 2). Defaults to 4 if
+ * no platform-specific definition exists.
+ */
+#ifndef MMOSAL_MAX_FAILURE_RECORDS
+#define MMOSAL_MAX_FAILURE_RECORDS    4
+#endif
+
 /** Data structure used to store information about a failure that can be preserved across reset. */
 struct mmosal_failure_info
 {
@@ -1000,6 +960,41 @@ void mmosal_impl_assert(void);
 #define MMOSAL_ASSERT_LOG_DATA(expre, ...) (void)(expr)
 #endif
 
+#ifdef ENABLE_MMOSAL_DEV_ASSERT
+/** Assertions that are only enabled for debug builds. */
+#define MMOSAL_DEV_ASSERT(x) MMOSAL_ASSERT(x)
+/** Assertions that are only enabled for debug builds
+ *  (with support for up to 4 @c uint32_t's to be logged). */
+#define MMOSAL_DEV_ASSERT_LOG_DATA(x, ...) MMOSAL_ASSERT_LOG_DATA(x, __VA_ARGS__)
+#else
+/** Assertions that are only enabled for debug builds. */
+#define MMOSAL_DEV_ASSERT(x)               ((void)(x))
+/** Assertions that are only enabled for debug builds
+ *  (with support for up to 4 @c uint32_t's to be logged). */
+#define MMOSAL_DEV_ASSERT_LOG_DATA(x, ...) ((void)(x))
+#endif
+
+#if defined(ENABLE_MANUAL_FAILURE_LOG_PROCESSING) && ENABLE_MANUAL_FAILURE_LOG_PROCESSING
+/**
+ * Extract the oldest un-viewed failure log entry.
+ *
+ * @info    This function returns a single log entry, but multiple log entries may be buffered.
+            It will return @c true if a valid log entry was buffered and extracted. Therefore it
+            is recommended to invoke this repeatedly until it returns @c false.
+ *
+ * @warning @c ENABLE_MANUAL_FAILURE_LOG_PROCESSING must be defined as 1 to use this function.
+ *          If not defined, failure log entries will be printed out after a failure or on reset.
+ *
+ * @param buf            An empty failure info instance to copy the extracted data into.
+ * @param failure_count  Optional pointer to retrieve the failure count at the time when this
+ *                       failure occurred, and can be useful for checking if any failure
+ *                       log entries were missed (e.g., due to the log buffer overrunning).
+ *                       May be @c NULL, in which case it will be ignored.
+ *
+ * @returns              @c true if a log was successfully extracted, else @c false.
+ */
+bool mmosal_extract_failure_info(struct mmosal_failure_info *buf, uint32_t *failure_count);
+#endif
 /** @} */
 
 /**
@@ -1007,6 +1002,17 @@ void mmosal_impl_assert(void);
  *
  * @{
  */
+
+
+
+/**
+ * OS abstracted version of @c printf used by morselib.
+ *
+ * @param format Format string
+ *
+ * @returns On success, the total number of characters written. On failure, a negative number.
+ */
+int mmosal_printf(const char *format, ...);
 
 /**
  * A safer version of @c strncpy.
@@ -1036,6 +1042,82 @@ static inline bool mmosal_safer_strcpy(char *dst, const char *src, size_t size)
     dst[size-1] = '\0';
     return ret;
 }
+
+/** @} */
+
+/**
+ * @defgroup MMOSAL_DEPRECATED Deprecated MMOSAL API
+ *
+ * This API should not be used by applications, since it may not be supported by all MMOSAL
+ * implementations.
+ *
+ * @{
+ */
+
+#ifndef MMOSAL_DEPRECATED_API_ENABLED
+/** Default to enabling deprecated API for backwards compatibility. Set this to 0 to remove
+ *  deprecated API declarations. */
+#define MMOSAL_DEPRECATED_API_ENABLED (1)
+#endif
+
+#if MMOSAL_DEPRECATED_API_ENABLED
+
+/**
+ * Block until the given task has terminated.
+ *
+ * @param task  Handle of the task to wait for.
+ *
+ * @note With FreeRTOS deleted tasks will not be cleaned up until the idle task runs.
+ *
+ */
+void mmosal_task_join(struct mmosal_task *task);
+
+/**
+ * Blocks the current task until a notification is received.
+ *
+ * Notifications can be sent using @ref mmosal_task_notify() or @ref mmosal_task_notify_from_isr().
+ *
+ * @param timeout_ms    The time to wait before giving up (or @c UINT32_MAX to wait forever).
+ *
+ * @returns @c true of a notification was received or @c false if it timed out.
+ *
+ * @see mmosal_task_notify()
+ * @see mmosal_task_notify_from_isr()
+ *
+ * @deprecated Do not invoke this function because it is deprecated and will be removed from
+ *             the mmosal API in a future release.
+ */
+bool mmosal_task_wait_for_notification(uint32_t timeout_ms);
+
+/**
+ * Notifies a waiting task (@ref mmosal_task_wait_for_notification()) that it can continue.
+ *
+ * @warning Must not be called from ISR context.
+ *
+ * @param task  Handle of the task to notify.
+ *
+ * @see mmosal_task_wait_for_notification()
+ *
+ * @deprecated Do not invoke this function because it is deprecated and will be removed from
+ *             the mmosal API in a future release.
+ */
+void mmosal_task_notify(struct mmosal_task *task);
+
+/**
+ * Notifies a waiting task (@ref mmosal_task_wait_for_notification()) that it can continue.
+ *
+ * @warning Must only be called from ISR context.
+ *
+ * @param task  Handle of the task to notify.
+ *
+ * @see mmosal_task_wait_for_notification()
+ *
+ * @deprecated Do not invoke this function because it is deprecated and will be removed from
+ *             the mmosal API in a future release.
+ */
+void mmosal_task_notify_from_isr(struct mmosal_task *task);
+
+#endif
 
 /** @} */
 

@@ -3,6 +3,6 @@ set(src "src/porting_assistant.c"
         "src/test_os.c"
         "src/test_wlan_fw_bcf.c"
         "src/test_wlan_io.c"
-        "src/test_hal.c")
+        "src/chip_cfg.c")
 
 idf_component_register(SRCS ${src} PRIV_REQUIRES driver morselib mm_shims)

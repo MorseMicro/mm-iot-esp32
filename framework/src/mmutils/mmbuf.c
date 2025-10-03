@@ -9,7 +9,6 @@
 #include "mmosal.h"
 #include "mmutils.h"
 
-
 static const struct mmbuf_ops mmbuf_heap_ops = {
     .free_mmbuf = mmosal_free
 };
@@ -19,7 +18,7 @@ struct mmbuf *mmbuf_alloc_on_heap(uint32_t space_at_start, uint32_t space_at_end
     struct mmbuf *mmbuf;
     uint8_t *buf;
     uint32_t alloc_len = MM_FAST_ROUND_UP(sizeof(*mmbuf), 4) +
-                         MM_FAST_ROUND_UP(space_at_start + space_at_end, 4);
+        MM_FAST_ROUND_UP(space_at_start + space_at_end, 4);
     mmbuf = (struct mmbuf *)mmosal_malloc(alloc_len);
     if (mmbuf == NULL)
     {
@@ -33,7 +32,7 @@ struct mmbuf *mmbuf_alloc_on_heap(uint32_t space_at_start, uint32_t space_at_end
     buf = ((uint8_t *)mmbuf) + MM_FAST_ROUND_UP(sizeof(*mmbuf), 4);
 
     mmbuf_init(mmbuf, buf, MM_FAST_ROUND_UP(space_at_start + space_at_end, 4),
-                   space_at_start, &mmbuf_heap_ops);
+               space_at_start, &mmbuf_heap_ops);
 
     return mmbuf;
 }
@@ -43,7 +42,7 @@ struct mmbuf *mmbuf_make_copy_on_heap(struct mmbuf *original)
     struct mmbuf *mmbuf;
     uint8_t *buf;
     uint32_t alloc_len = MM_FAST_ROUND_UP(sizeof(*original), 4) +
-                         original->buf_len;
+        original->buf_len;
     mmbuf = (struct mmbuf *)mmosal_malloc(alloc_len);
     if (mmbuf == NULL)
     {
@@ -90,6 +89,7 @@ static void mmbuf_list_sanity_check(struct mmbuf_list *list)
     MMOSAL_ASSERT(cnt == list->len);
     MMOSAL_ASSERT(prev == list->tail);
 }
+
 #endif
 
 void mmbuf_list_prepend(struct mmbuf_list *list, struct mmbuf *mmbuf)
@@ -107,7 +107,6 @@ void mmbuf_list_prepend(struct mmbuf_list *list, struct mmbuf *mmbuf)
     mmbuf_list_sanity_check(list);
 #endif
 }
-
 
 void mmbuf_list_append(struct mmbuf_list *list, struct mmbuf *mmbuf)
 {
@@ -198,7 +197,7 @@ struct mmbuf *mmbuf_list_dequeue(struct mmbuf_list *list)
         }
 
 #ifdef MMBUF_SANITY
-    mmbuf_list_sanity_check(list);
+        mmbuf_list_sanity_check(list);
 #endif
         if (mmbuf != NULL)
         {

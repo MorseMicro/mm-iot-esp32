@@ -85,9 +85,7 @@ enum task_state
 {
     TASK_NOT_STARTED,
     TASK_STARTED,
-    TASK_WAITING_FOR_NOTIFICATION,
     TASK_TERMINATING,
-    TASK_ERROR_WAITING_FOR_NOTIFICATION,
     TASK_ERROR_GET_ACTIVE_INVALID,
 };
 
@@ -110,15 +108,6 @@ static void new_task_main(void *arg)
     if (mmosal_task_get_active() != task_handle)
     {
         task_state = TASK_ERROR_GET_ACTIVE_INVALID;
-        return;
-    }
-
-    /* Wait for notification. */
-    task_state = TASK_WAITING_FOR_NOTIFICATION;
-    bool ok = mmosal_task_wait_for_notification(UINT32_MAX);
-    if (!ok)
-    {
-        task_state = TASK_ERROR_WAITING_FOR_NOTIFICATION;
         return;
     }
 
@@ -150,12 +139,12 @@ TEST_STEP(test_step_os_task_creation, "Task creation and preemption")
         return TEST_FAILED_NON_CRITICAL;
     }
 
-    /* Allow some time for the task to wake up and then wait for notification. */
+    /* Allow some time for the task to wake up. */
     mmosal_task_sleep(50);
 
     switch (task_state)
     {
-    case TASK_WAITING_FOR_NOTIFICATION:
+    case TASK_TERMINATING:
         break;
 
     case TASK_ERROR_GET_ACTIVE_INVALID:
@@ -163,38 +152,11 @@ TEST_STEP(test_step_os_task_creation, "Task creation and preemption")
                  "mmosal_task_get_active() did not return the correct task handle.\n\n");
         return TEST_FAILED_NON_CRITICAL;
 
-    case TASK_ERROR_WAITING_FOR_NOTIFICATION:
-        TEST_LOG_APPEND(
-                 "mmosal_task_wait_for_notification() unexpectedly returned false.\n\n");
-        return TEST_FAILED_NON_CRITICAL;
-
     default:
         TEST_LOG_APPEND(
                  "Task in unexpected state %d.\n\n", task_state);
         return TEST_FAILED_NON_CRITICAL;
     }
 
-    /* Notify the task and ensure that it proceeded to the next state */
-    mmosal_task_notify(task_handle);
-
-    switch (task_state)
-    {
-    case TASK_TERMINATING:
-        return TEST_PASSED;
-
-    case TASK_ERROR_GET_ACTIVE_INVALID:
-        TEST_LOG_APPEND(
-                 "mmosal_task_get_active() did not return the correct task handle.\n\n");
-        return TEST_FAILED_NON_CRITICAL;
-
-    case TASK_ERROR_WAITING_FOR_NOTIFICATION:
-        TEST_LOG_APPEND(
-                 "mmosal_task_wait_for_notification() unexpectedly returned false.\n\n");
-        return TEST_FAILED_NON_CRITICAL;
-
-    default:
-        TEST_LOG_APPEND(
-                 "Task in unexpected state %d.\n\n", task_state);
-        return TEST_FAILED_NON_CRITICAL;
-    }
+    return TEST_PASSED;
 }

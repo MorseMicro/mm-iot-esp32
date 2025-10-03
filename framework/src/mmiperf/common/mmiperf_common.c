@@ -7,7 +7,6 @@
 
 #include "mmiperf_private.h"
 
-
 void iperf_finalize_report_and_invoke_callback(struct mmiperf_state *base_state,
                                                uint32_t duration_ms,
                                                enum mmiperf_report_type report_type)
@@ -83,27 +82,32 @@ void iperf_populate_udp_server_report(struct mmiperf_state *base_state,
     report->IPGsum = htobe32(base_state->report.ipg_sum_ms);
 }
 
-
 bool iperf_parse_udp_server_report(struct mmiperf_state *base_state,
                                    const struct iperf_udp_header *hdr,
                                    const struct iperf_udp_server_report *report,
                                    enum iperf_version version)
 {
-    int64_t packet_id = 0;
+    MMOSAL_ASSERT(hdr != NULL);
+
+    /* If the packet_id is not less than or equal to zero then this is not a report and
+     * something went wrong. */
     if (version == IPERF_VERSION_2_0_9)
     {
-        packet_id = (int64_t)((int32_t)be32toh(hdr->id_lo));
+        if ((int32_t)be32toh(hdr->id_lo) > 0)
+        {
+            return false;
+        }
     }
     else
     {
-        packet_id = (int64_t)(((uint64_t)be32toh(hdr->id_hi) << 32) |
-                               (uint64_t)be32toh(hdr->id_lo));
-    }
-
-    if (packet_id > 0)
-    {
-        /* If not less than or equal to zero then this is not a report and something went wrong. */
-        return false;
+        if ((int32_t)be32toh(hdr->id_hi) > 0)
+        {
+            return false;
+        }
+        if (hdr->id_hi == 0 && hdr->id_lo != 0)
+        {
+            return false;
+        }
     }
 
     base_state->report.bytes_transferred = (uint64_t)be32toh(report->total_len1) << 32;

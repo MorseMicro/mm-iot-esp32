@@ -17,9 +17,9 @@
 /**
  * Initialise the given iperf state structure at the start of an iperf session.
  *
- * @param base          The data sturcture to initialize.
- * @param local_addr    The local socket address that is used for the session (includes port).
- * @param remote_addr   The remote socket address that is used for the session (includes port).
+ * @param base        The data sturcture to initialize.
+ * @param local_addr  The local socket address that is used for the session (includes port).
+ * @param remote_addr The remote socket address that is used for the session (includes port).
  */
 void iperf_freertosplustcp_session_start_common(struct mmiperf_state *base,
                                                 const struct freertos_sockaddr *local_addr,

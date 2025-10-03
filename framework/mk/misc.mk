@@ -4,4 +4,3 @@
 #
 # Miscellaneous variables/rules can go here
 #
-CFLAGS+=-Os

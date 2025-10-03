@@ -38,7 +38,7 @@
 #include "mmosal.h"
 
 /* File internal memory allocation (struct iperf_*): this defaults to
-   the heap */
+ *  the heap */
 #ifndef IPERF_ALLOC
 #define IPERF_ALLOC(type) mmosal_malloc_(sizeof(type))
 #define IPERF_FREE(type, item) mmosal_free(item)
@@ -100,7 +100,6 @@ struct iperf_settings
     uint32_t amount;     /* pos. value: bytes?; neg. values: time (unit is 10ms: 1/100 second) */
 };
 
-
 #define IPERF_HEADER_VERSION1 0x80000000
 
 struct iperf_udp_header
@@ -110,7 +109,6 @@ struct iperf_udp_header
     uint32_t tv_usec;
     uint32_t id_hi; /* Note: not present in Iperf 2.0.9 */
 };
-
 
 struct iperf_udp_server_report
 {
@@ -175,8 +173,8 @@ void iperf_finalize_report_and_invoke_callback(struct mmiperf_state *state, uint
 /**
  * Populate an iperf UDP server report to send to a client.
  *
- * @param base_state    Iperf session state data structure.
- * @param report        The report structure to populate.
+ * @param base_state Iperf session state data structure.
+ * @param report     The report structure to populate.
  */
 void iperf_populate_udp_server_report(struct mmiperf_state *base_state,
                                       struct iperf_udp_server_report *report);
@@ -184,11 +182,11 @@ void iperf_populate_udp_server_report(struct mmiperf_state *base_state,
 /**
  * Parse an iperf UDP server report received from a server.
  *
- * @param base_state    Iperf session state data structure. This will be updated based on the
+ * @param base_state Iperf session state data structure. This will be updated based on the
  *                      received report.
- * @param hdr           The iperf UDP header in the iperf frame.
- * @param report        The iperf UDP server report in the iperf frame.
- * @param version       The iperf version.
+ * @param hdr        The iperf UDP header in the iperf frame.
+ * @param report     The iperf UDP server report in the iperf frame.
+ * @param version    The iperf version.
  */
 bool iperf_parse_udp_server_report(struct mmiperf_state *base_state,
                                    const struct iperf_udp_header *hdr,
@@ -204,7 +202,7 @@ struct mmiperf_state *iperf_list_get(mmiperf_handle_t handle);
 /**
  * Get a pointer to iperf payload data at the given offset.
  *
- * @param offset    Offset into the data.
+ * @param offset Offset into the data.
  *
  * @returns a pointer into the data.
  */

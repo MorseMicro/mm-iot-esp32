@@ -35,7 +35,7 @@ int mm_find_ie_from_offset(const uint8_t *ies, uint32_t ies_len,
     while ((search_offset + 2) <= ies_len)
     {
         uint8_t type = ies[search_offset];
-        uint8_t length = ies[search_offset+1];
+        uint8_t length = ies[search_offset + 1];
 
         if (type == ie_type)
         {
@@ -67,7 +67,7 @@ int mm_find_vendor_specific_ie_from_offset(const uint8_t *ies, uint32_t ies_len,
         }
 
         uint8_t ie_type = ies[offset];
-        uint8_t ie_length = ies[offset+1];
+        uint8_t ie_length = ies[offset + 1];
         const uint8_t *ie_data = ies + (offset + 2);
 
         if (ie_type == MM_VENDOR_SPECIFIC_IE_TYPE &&
@@ -117,16 +117,16 @@ int mm_parse_rsn_information(const uint8_t *ies, uint32_t ies_len,
     }
 
     /* Skip version field */
-    output->version = ies[offset] | ies[offset+1] << 8;
+    output->version = ies[offset] | ies[offset + 1] << 8;
     offset += 2;
     length -= 2;
 
     output->group_cipher_suite =
-        ies[offset] << 24 | ies[offset+1] << 16 | ies[offset+2] << 8 | ies[offset+3];
+        ies[offset] << 24 | ies[offset + 1] << 16 | ies[offset + 2] << 8 | ies[offset + 3];
     offset += 4;
     length -= 4;
 
-    num_pairwise_cipher_suites = ies[offset] | ies[offset+1] << 8;
+    num_pairwise_cipher_suites = ies[offset] | ies[offset + 1] << 8;
     offset += 2;
     length -= 2;
 
@@ -147,14 +147,14 @@ int mm_parse_rsn_information(const uint8_t *ies, uint32_t ies_len,
         if (ii < output->num_pairwise_cipher_suites)
         {
             output->pairwise_cipher_suites[ii] =
-                ies[offset] << 24 | ies[offset+1] << 16 |
-                ies[offset+2] << 8 | ies[offset+3];
+                ies[offset] << 24 | ies[offset + 1] << 16 |
+                    ies[offset + 2] << 8 | ies[offset + 3];
         }
         offset += 4;
         length -= 4;
     }
 
-    num_akm_suites = ies[offset] | ies[offset+1] << 8;
+    num_akm_suites = ies[offset] | ies[offset + 1] << 8;
     offset += 2;
     length -= 2;
 
@@ -175,17 +175,16 @@ int mm_parse_rsn_information(const uint8_t *ies, uint32_t ies_len,
         if (ii < output->num_akm_suites)
         {
             output->akm_suites[ii] =
-                ies[offset] << 24 | ies[offset+1] << 16 |
-                ies[offset+2] << 8 | ies[offset+3];
+                ies[offset] << 24 | ies[offset + 1] << 16 |
+                    ies[offset + 2] << 8 | ies[offset + 3];
         }
         offset += 4;
         length -= 4;
     }
 
-    output->rsn_capabilities = ies[offset] | ies[offset+1] << 8;
+    output->rsn_capabilities = ies[offset] | ies[offset + 1] << 8;
     return 0;
 }
-
 
 int mm_parse_s1g_operation(const uint8_t *ies, uint32_t ies_len,
                            struct mm_s1g_operation *output)

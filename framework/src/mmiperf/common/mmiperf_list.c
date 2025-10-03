@@ -32,7 +32,6 @@
  * Authors: Simon Goldschmidt, Morse Micro
  */
 
-
 #include "mmiperf_private.h"
 
 /** List of active iperf sessions */

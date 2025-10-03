@@ -1,1 +1,1 @@
-MM-IOT-SDK version 2.8.2-esp32
+MM-IOT-SDK version 2.9.7-esp32

@@ -112,7 +112,6 @@ void mmhal_uart_deinit(void)
         mmhal_uart.rx_thread.run = false;
         while (!mmhal_uart.rx_thread.complete)
         {
-            mmosal_task_notify(mmhal_uart.rx_thread.handle);
             mmosal_task_sleep(3);
         }
         mmhal_uart.rx_thread.handle = NULL;

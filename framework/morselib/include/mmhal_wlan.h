@@ -68,13 +68,13 @@ void mmhal_wlan_deinit(void);
 /**
  * Get MAC address override.
  *
- * This function allows the HAL to override the MAC address to be used by the device. The
- * MAC address override should be written to @p mac_addr. If no override is required then
- * @p mac_addr should be left untouched.
+ * This function allows the HAL to override the MAC address to be used by the device. The MAC
+ * address override should be written to @p mac_addr. If no override is required then @p mac_addr
+ * should be left untouched.
  *
- * @param[out] mac_addr Location where the MAC address will be stored. This will be initialized
- *                      to zero the first time this function is invoked, and to the previously
- *                      configured MAC address on subsequent invocations.
+ * @param mac_addr Location where the MAC address will be stored. When called this will contain the
+ *                 MAC address provided by the transceiver if available or all zeros if no MAC
+ *                 address is available from the transceiver.
  */
 void mmhal_read_mac_addr(uint8_t *mac_addr);
 

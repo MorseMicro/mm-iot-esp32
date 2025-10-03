@@ -23,7 +23,8 @@
  * | ------------ | ------- |
  * | AU | Australia |
  * | CA | Canada |
- * | EU | User Assigned EU |
+ * | EU | User assigned EU |
+ * | GB | United Kingdom |
  * | IN | India |
  * | JP | Japan |
  * | KR | South Korea |
@@ -128,21 +129,44 @@ const struct mmwlan_s1g_channel_list s1g_channel_list_CA = {
     .channels = s1g_channels_CA,
 };
 
-/** List of valid S1G channels for User Assigned EU. */
+/** List of valid S1G channels for User assigned EU. */
 const struct mmwlan_s1g_channel s1g_channels_EU[] = {
     /* Ctr Freq (Hz), Duty Cycle (%/100), Omit Control Response, Global Op Class, S1G Op Class, S1G Chan #, Op BW, Max Tx EIRP (dBm), Min Packet Spacing Window (microsec), airtime_min (microsec), airtime_max (microsec) */
-    {  863500000,   280, false, 66,  6,  1,  1,  16, 0, 0, 0 },
-    {  864500000,   280, false, 66,  6,  3,  1,  16, 0, 0, 0 },
-    {  865500000,   280, false, 66,  6,  5,  1,  16, 0, 0, 0 },
-    {  866500000,   280, false, 66,  6,  7,  1,  16, 0, 0, 0 },
-    {  867500000,   280, false, 66,  6,  9,  1,  16, 0, 0, 0 },
+    {  863500000, 10000, false, 66,  6,  1,  1,  16, 0, 0, 0 },
+    {  864500000, 10000, false, 66,  6,  3,  1,  16, 0, 0, 0 },
+    {  865500000, 10000, false, 66,  6,  5,  1,  16, 0, 0, 0 },
+    {  866500000, 10000, false, 66,  6,  7,  1,  16, 0, 0, 0 },
+    {  867500000, 10000, false, 66,  6,  9,  1,  16, 0, 0, 0 },
+    {  864000000, 10000, false, 67,  7,  2,  2,  16, 0, 0, 0 },
+    {  866000000, 10000, false, 67,  7,  6,  2,  16, 0, 0, 0 },
 };
 
-/** Channel list structure for User Assigned EU. */
+/** Channel list structure for User assigned EU. */
 const struct mmwlan_s1g_channel_list s1g_channel_list_EU = {
     .country_code = "EU",
     .num_channels = (sizeof(s1g_channels_EU)/sizeof(s1g_channels_EU[0])),
     .channels = s1g_channels_EU,
+};
+
+/** List of valid S1G channels for United Kingdom. */
+const struct mmwlan_s1g_channel s1g_channels_GB[] = {
+    /* Ctr Freq (Hz), Duty Cycle (%/100), Omit Control Response, Global Op Class, S1G Op Class, S1G Chan #, Op BW, Max Tx EIRP (dBm), Min Packet Spacing Window (microsec), airtime_min (microsec), airtime_max (microsec) */
+    {  863500000, 10000, false, 66,  6,  1,  1,  16, 0, 0, 0 },
+    {  864500000, 10000, false, 66,  6,  3,  1,  16, 0, 0, 0 },
+    {  865500000, 10000, false, 66,  6,  5,  1,  16, 0, 0, 0 },
+    {  866500000, 10000, false, 66,  6,  7,  1,  16, 0, 0, 0 },
+    {  867500000, 10000, false, 66,  6,  9,  1,  16, 0, 0, 0 },
+    {  864000000, 10000, false, 67,  7,  2,  2,  16, 0, 0, 0 },
+    {  866000000, 10000, false, 67,  7,  6,  2,  16, 0, 0, 0 },
+    {  917900000,   280, false, 77, 30, 33,  1,  16, 0, 0, 0 },
+    {  918900000,   280, false, 77, 30, 35,  1,  16, 0, 0, 0 },
+};
+
+/** Channel list structure for United Kingdom. */
+const struct mmwlan_s1g_channel_list s1g_channel_list_GB = {
+    .country_code = "GB",
+    .num_channels = (sizeof(s1g_channels_GB)/sizeof(s1g_channels_GB[0])),
+    .channels = s1g_channels_GB,
 };
 
 /** List of valid S1G channels for India. */
@@ -313,6 +337,7 @@ const struct mmwlan_s1g_channel_list *regulatory_db_domains[] = {
     &s1g_channel_list_AU,
     &s1g_channel_list_CA,
     &s1g_channel_list_EU,
+    &s1g_channel_list_GB,
     &s1g_channel_list_IN,
     &s1g_channel_list_JP,
     &s1g_channel_list_KR,

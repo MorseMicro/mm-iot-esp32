@@ -5,44 +5,62 @@ set(src "mmosal_shim_freertos_esp32.c"
         "mmhal_wlan_binaries.c"
         "wlan_hal.c"
         "crypto_mbedtls_mm.c")
-set(inc "include")
+
+# Define architecture specific paths and variables
+if(${IDF_TARGET} STREQUAL "esp32s3")
+    set(inc "include/esp32s3")
+    set(BFDNAME "elf32-xtensa-le")
+    set(ARCH "xtensa")
+elseif(${IDF_TARGET} STREQUAL "esp32c6")
+    set(inc "include/esp32c6")
+    set(BFDNAME "elf32-littleriscv")
+    set(ARCH "riscv")
+elseif(${IDF_TARGET} STREQUAL "esp32c3")
+    set(inc "include/esp32c3")
+    set(BFDNAME "elf32-littleriscv")
+    set(ARCH "riscv")
+else()
+    message(FATAL_ERROR "Target ${IDF_TARGET} not known. Exiting...")
+endif()
 
 idf_component_register(INCLUDE_DIRS ${inc}
                        SRCS ${src}
-                       PRIV_REQUIRES morselib spi_flash app_update log driver mbedtls
+                       PRIV_REQUIRES morselib spi_flash app_update log driver mbedtls esp_timer
                        WHOLE_ARCHIVE)
 
-set(FW_MBIN "${CMAKE_CURRENT_LIST_DIR}/../morsefirmware/mm6108.mbin")
-set(FW_OBJ "${FW_MBIN}.o")
+# Kconfig variables are used to determine which bcf file to add to the final application. The file
+# can be in one of two location.
+#   - In `morsefirmware/` in the root of the application being built.
+#   - In `framework/morsefirmware/` in the mm-iot-esp32 sdk.
+set(APPLICATION_BLOB_DIR "${CMAKE_SOURCE_DIR}/morsefirmware")
+set(MMIOT_BLOB_DIR "${CMAKE_CURRENT_LIST_DIR}/../morsefirmware")
 
-# Kconfig variables are used to determine which bcf file to add to the final application
-if(CONFIG_MM_BCF_MF08651_US)
-    message(STATUS "Using BCF for MM6108_MF08651_US")
-    set(BCF_MBIN "${CMAKE_CURRENT_LIST_DIR}/../morsefirmware/bcf_mf08651_us.mbin")
-elseif(CONFIG_MM_BCF_MF08551)
-    message(STATUS "Using BCF for MM6108_MF08551")
-    set(BCF_MBIN "${CMAKE_CURRENT_LIST_DIR}/../morsefirmware/bcf_mf08551.mbin")
-elseif(CONFIG_MM_BCF_MF08251)
-    message(STATUS "Using BCF for MM6108_MF08251")
-    set(BCF_MBIN "${CMAKE_CURRENT_LIST_DIR}/../morsefirmware/bcf_mf08251.mbin")
-elseif(CONFIG_MM_BCF_MF03120)
-    message(STATUS "Using BCF for MM6108_MF03120")
-    set(BCF_MBIN "${CMAKE_CURRENT_LIST_DIR}/../morsefirmware/bcf_mf03120.mbin")
-elseif(CONFIG_MM_BCF_AW_HM593)
-    message(STATUS "Using BCF for MM6108_AW_HM593")
-    set(BCF_MBIN "${CMAKE_CURRENT_LIST_DIR}/../morsefirmware/bcf_aw_hm593.mbin")
-elseif(CONFIG_MM_BCF_AW_HM593_4V3)
-    message(STATUS "Using BCF for MM6108_AW_HM593_4V3")
-    set(BCF_MBIN "${CMAKE_CURRENT_LIST_DIR}/../morsefirmware/bcf_aw_hm593_4v3.mbin")
-else()
-    message(FATAL_ERROR "No BCF specified for mm_shims")
-endif()
+function(find_binary_blob FILE_VAR OBJ_VAR CONFIG_VAR)
+    # Clear the CMAKE cache to force it to search for the file every time.
+    unset(${FILE_VAR} CACHE)
 
-set(BCF_OBJ "${BCF_MBIN}.o")
+    find_file(${FILE_VAR}
+        NAMES ${${CONFIG_VAR}}
+        PATHS ${APPLICATION_BLOB_DIR} ${MMIOT_BLOB_DIR}
+        NO_DEFAULT_PATH
+    )
 
-# Define the architecture and other variables
-set(BFDNAME "elf32-xtensa-le")
-set(ARCH "xtensa")
+    if(NOT ${FILE_VAR})
+        message(WARNING
+            "Invalid ${FILE_VAR} specified: ${${CONFIG_VAR}}\n"
+            "File must be present in one of the following:\n"
+            " - ${APPLICATION_BLOB_DIR}\n"
+            " - ${MMIOT_BLOB_DIR}"
+        )
+    endif()
+
+    message(STATUS "${FILE_VAR}: ${${FILE_VAR}}")
+
+    set(${OBJ_VAR} "${${FILE_VAR}}.o" PARENT_SCOPE)
+endfunction()
+
+find_binary_blob(BCF_MBIN BCF_OBJ CONFIG_MM_BCF_FILE)
+find_binary_blob(FW_MBIN FW_OBJ CONFIG_MM_FW_FILE)
 
 function(make_binary_object __file __prefix)
     get_filename_component(__file_name ${__file} NAME)
@@ -71,4 +89,3 @@ target_link_libraries(${COMPONENT_TARGET} PRIVATE
     "${FW_OBJ}"
     "${BCF_OBJ}"
 )
-

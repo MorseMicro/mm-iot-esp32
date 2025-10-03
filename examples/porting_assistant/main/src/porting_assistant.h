@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "mmhal.h"
 #include "mmosal.h"
 
 #include "config.h"

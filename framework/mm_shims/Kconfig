@@ -50,26 +50,36 @@ menu "Morse Micro Shim Configuration"
             Out of band interupt pin used to indicate that
             the MM chip has data for the host.
 
-    choice MM_BCF
-        prompt "BCF to link when building the FW"
-        default MM_BCF_MF08651_US
+    config MM_BCF_FILE
+        string "MM Board Configuration File"
+        default "bcf_mf08651_us.mbin"
         help
-            The Board Configuration File (BCF) is a configuration file for the Morse Micro chip that provides
-            board-specific information and is required for the system to function properly. BCFs for Morse Micro
-            modules are included in the MM-IoT-SDK package. These modules can be identified by the part numbers
-            printed on their labels, which take the form MM6108-MFxxxxxx.
+            Set the name of the BCF (Board Configuration File) to use.
+            Example valid filenames include:
+              - bcf_mf08651_us.mbin
+              - bcf_mf08551.mbin
+              - bcf_mf08251.mbin
+              - bcf_mf03120.mbin
 
-        config MM_BCF_MF08651_US
-            bool  "mf08651_us"
-        config MM_BCF_MF08551
-            bool  "mf08551"
-        config MM_BCF_MF08251
-            bool  "mf08251"
-        config MM_BCF_MF03120
-            bool  "mf03120"
-        config MM_BCF_AW_HM593
-            bool  "aw_hm593"
-        config MM_BCF_AW_HM593_4V3
-            bool  "aw_hm593_4v3"
-    endchoice
+            This file provides board-specific configuration data for the Morse Micro chip/module.
+
+            The build system will search for the specified file in the following locations:
+              1. morsefirmware/ in the root of the application being built
+              2. framework/morsefirmware/ in the mm-iot-esp32 SDK (defined via the MMIOT_ROOT environment variable)
+
+            If the file is not found in either location, a warning will be reported during
+            configuration.
+
+    config MM_FW_FILE
+        string "MM Firmware File"
+        default "mm6108.mbin"
+        help
+            This is the firmware file for the Morse Micro chip/module.
+
+            The build system will search for the specified file in the following locations:
+              1. morsefirmware/ in the root of the application being built
+              2. framework/morsefirmware/ in the mm-iot-esp32 SDK (defined via the MMIOT_ROOT environment variable)
+
+            If the file is not found in either location, a warning will be reported during
+            configuration.
 endmenu

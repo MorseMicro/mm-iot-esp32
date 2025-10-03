@@ -8,18 +8,6 @@
 
 #include <stdint.h>
 
-enum sdio_spi_rc
-{
-    RC_SUCCESS,
-    RC_UNSPECIFIED_ERROR,
-    RC_DEVICE_NOT_READY,
-    RC_INVALID_RESPONSE,
-    RC_INVALID_RESPONSE_DATA,
-    RC_INVALID_CRC_RECIEVED,
-    RC_RESPONSE_TIMEOUT,
-    RC_INVALID_INPUT,
-};
-
 /**
  * Send an SDIO command to the transceiver and validate the response.
  *
@@ -28,9 +16,9 @@ enum sdio_spi_rc
  * @param rsp       If not NULL, then will be set to the first octet of the received response,
  *                  if applicable.
  *
- * @return Result of operation
+ * @return Result of operation (0 or an error code from @ref mmhal_sdio_error_codes).
  */
-int sdio_spi_send_cmd(uint8_t cmd_idx, uint32_t arg, uint8_t *rsp);
+int sdio_spi_send_cmd(uint8_t cmd_idx, uint32_t arg, uint32_t *rsp);
 
 /**
  * Carry out the steps to read a le32 value from the transceiver at the specified address.
@@ -38,7 +26,7 @@ int sdio_spi_send_cmd(uint8_t cmd_idx, uint32_t arg, uint8_t *rsp);
  * @param address   Address to read from.
  * @param data      Reference to the location to store the data. This must not be NULL.
  *
- * @return Result of operation
+ * @return Result of operation (0 or an error code from @ref mmhal_sdio_error_codes).
  */
 int sdio_spi_read_le32(uint32_t address, uint32_t *data);
 
@@ -49,9 +37,57 @@ int sdio_spi_read_le32(uint32_t address, uint32_t *data);
  * @param data      Data to write to the specified address.
  * @param len       Length of the data to write.
  *
- * @return Result of operation
+ * @return Result of operation (0 or an error code from @ref mmhal_sdio_error_codes).
  */
 int sdio_spi_write_multi_byte(uint32_t address, const uint8_t *data, uint32_t len);
+
+/**
+ * Carry out the steps to read a le32 value from the transceiver at the specified address.
+ *
+ * @param address   Address to read from.
+ * @param value     The value to be written at specified address.
+ *
+ * @return Result of operation (0 or an error code from @ref mmhal_sdio_error_codes).
+ */
+int sdio_spi_write_le32(uint32_t address, uint32_t value);
+
+/**
+ * Function to modify specified bits in a register.
+ *
+ * @param address Address of the register to modify
+ * @param mask Mask for bits to change (0 means not changing the bit)
+ * @param value Value of the bits that are specified by Mask
+ *
+ * @return Result of operation (0 or an error code from @ref mmhal_sdio_error_codes).
+ */
+int sdio_spi_update_le32(uint32_t address, uint32_t mask, uint32_t value);
+
+/**
+ * Function to set specified bits in a specified address.
+ *
+ * @param address Address of the register to modify
+ * @param mask Mask for bits to be set (0 means not changing the bit)
+ *
+ * @return Result of operation (0 or an error code from @ref mmhal_sdio_error_codes).
+ */
+static inline int sdio_spi_set_bits_le32(uint32_t address, uint32_t mask)
+{
+    return sdio_spi_update_le32(address, mask, mask);
+}
+
+/**
+ * Function to clear specified bits in a specified address.
+ *
+ * @param address Address of the register to modify
+ * @param mask Mask for bits to be cleared (0 means not changing the bit)
+ *
+ * @return Result of operation (0 or an error code from @ref mmhal_sdio_error_codes).
+ */
+static inline int sdio_spi_clear_bits_le32(uint32_t address, uint32_t mask)
+{
+    return sdio_spi_update_le32(address, mask, 0);
+}
+
 
 /**
  * Carry out the steps to read a large buffer from a specified address in the transceiver.
@@ -60,6 +96,6 @@ int sdio_spi_write_multi_byte(uint32_t address, const uint8_t *data, uint32_t le
  * @param data      Buffer to write the data into.
  * @param len       Length of the data to read.
  *
- * @return Result of operation
+ * @return Result of operation (0 or an error code from @ref mmhal_sdio_error_codes).
  */
 int sdio_spi_read_multi_byte(uint32_t address, uint8_t *data, uint32_t len);

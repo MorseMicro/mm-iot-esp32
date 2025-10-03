@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "mmhal.h"
 #include "mmosal.h"
 
 #define ANSI_ESC_SGR(_n) "\033[" _n "m"
@@ -37,7 +38,7 @@
 #define F_RED(_str) _str
 #define F_BLUE(_str) _str
 #define F_YELLOW(_str)  _str
-#define F_GREY(_str) _str
+#define F_GRAY(_str) _str
 #define F_GREEN(_str) _str
 #endif
 

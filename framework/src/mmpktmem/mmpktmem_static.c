@@ -36,7 +36,6 @@
 #define MMPKT_LOG(...) printf(__VA_ARGS__)
 #endif
 
-
 struct pktmem_data
 {
     /** Boolean tracking whether the data path is currently paused. */
