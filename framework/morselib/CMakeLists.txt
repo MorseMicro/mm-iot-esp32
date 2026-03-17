@@ -32,7 +32,11 @@ else()
         list(APPEND protected_syms -p "${sym}")
     endforeach()
 
-    string(REGEX REPLACE "objcopy$" "" TOOLCHAIN_BASE "${CMAKE_OBJCOPY}")
+    if(CMAKE_HOST_WIN32)
+        string(REGEX REPLACE "objcopy\\.exe$" "" TOOLCHAIN_BASE "${CMAKE_OBJCOPY}")
+    else()
+        string(REGEX REPLACE "objcopy$" "" TOOLCHAIN_BASE "${CMAKE_OBJCOPY}")
+    endif()
     set(AR "${TOOLCHAIN_BASE}ar")
     set(RANLIB "${TOOLCHAIN_BASE}ranlib")
     set(LIBMORSE  "$<TARGET_FILE:libmorse>")
@@ -50,12 +54,26 @@ else()
         SAVE
         END")
 
+    if(CMAKE_HOST_WIN32)
+        # On Windows, shell pipes don't work in CMake COMMAND, so use a cmake script instead
+        set(AR_MERGE_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/ar_merge.cmake")
+        file(GENERATE
+            OUTPUT "${AR_MERGE_SCRIPT}"
+            CONTENT "execute_process(COMMAND \"${AR}\" -M INPUT_FILE \"${MERGESCRIPT}\")")
+        set(AR_MERGE_CMD ${CMAKE_COMMAND} -P ${AR_MERGE_SCRIPT})
+        # .py files are not directly executable via cmd.exe
+        set(MANGLER_CMD ${PYTHON} ${MANGLER})
+    else()
+        set(AR_MERGE_CMD ${CMAKE_COMMAND} -E cat ${MERGESCRIPT} | ${AR} -M)
+        set(MANGLER_CMD ${MANGLER})
+    endif()
+
     add_custom_command(
         OUTPUT ${LIBMORSEMANG}
         COMMAND ${CMAKE_COMMAND} -E echo "Creating mangled libmorse"
-        COMMAND ${CMAKE_COMMAND} -E cat ${MERGESCRIPT} | ${AR} -M
+        COMMAND ${AR_MERGE_CMD}
         COMMAND ${RANLIB} ${LIBMORSEMANG}
-        COMMAND ${MANGLER} -t ${TOOLCHAIN_BASE} -m ${CMAKE_CURRENT_BINARY_DIR} ${protected_syms} ${LIBMORSEMANG}
+        COMMAND ${MANGLER_CMD} -t ${TOOLCHAIN_BASE} -m ${CMAKE_CURRENT_BINARY_DIR} ${protected_syms} ${LIBMORSEMANG}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS libmorse idf::hostap
     )
